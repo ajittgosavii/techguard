@@ -2378,27 +2378,23 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Navigation with all features
-    st.markdown("##### 🎯 Core Operations")
+    # Navigation with all features - reorganized and consolidated
+    st.markdown("##### 🎯 Navigation")
     page = st.radio(
         "Navigate",
         [
-            # Dashboard & Phases
+            # === MAIN PHASES ===
             "🏠 Dashboard", 
             "🔨 Build & Run", 
             "🔄 Evolve & Improve", 
-            "🚀 Transform",
-            # Advanced Features
+            "🚀 Transform",  # AI Command Center - all AI features consolidated here
+            # === SPECIALIZED MODULES ===
             "💰 FinOps Center",
             "🐳 Container Security",
             "📦 Account Lifecycle",
             "📜 Policy as Code",
             "🏢 Multi-Account Manager",
-            # AI Features
-            "🤖 AI Policy Advisor", 
-            "🦾 AI Security Agent",
-            "🧠 AI Predictions",
-            # Operations
+            # === OPERATIONS ===
             "⚙️ Operational Controls", 
             "🏢 Accounts", 
             "🔍 Findings", 
@@ -3243,134 +3239,644 @@ elif page == "🔄 Evolve & Improve":
 
 # ==================== TRANSFORM PAGE ====================
 elif page == "🚀 Transform":
-    st.markdown('<div class="phase-header transform-phase">🚀 Transform Phase</div>', unsafe_allow_html=True)
-    st.markdown("**Innovation & Future-Ready - AI-powered transformation**")
+    st.markdown('<div class="phase-header transform-phase">🚀 Transform Phase - AI Command Center</div>', unsafe_allow_html=True)
+    st.markdown("**Agentic AI Platform - Autonomous Security, Compliance & Optimization**")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Zero-Trust", "🤖 AIOps Platform", "👥 Human-AI Collaboration", "💰 FinOps"])
+    # Mode indicator
+    mode_badge = "🟠 DEMO" if is_demo_mode() else "🟢 LIVE"
+    st.caption(f"Data Mode: {mode_badge}")
     
+    # AI Platform Overview
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); padding: 1.5rem; border-radius: 12px; color: white; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0; color: white;">🤖 Agentic AI Platform</h3>
+        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; color: white;">Autonomous agents powered by Claude that can investigate, analyze, and remediate security issues across your AWS environment.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # AI Agent Status Dashboard
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("Active Agents", "5", delta="All online")
+    with col2:
+        st.metric("Tasks Completed", "247", delta="+34 today")
+    with col3:
+        st.metric("Auto-Remediations", "89", delta="+12 this week")
+    with col4:
+        st.metric("Predictions Made", "156", delta="92% accurate")
+    with col5:
+        st.metric("Time Saved", "128 hrs", delta="This month")
+    
+    st.markdown("---")
+    
+    # Main Agent Tabs
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🛡️ Compliance Agent", 
+        "🔧 Remediation Agent", 
+        "🎯 Zero-Trust Agent",
+        "💰 FinOps Agent",
+        "🧠 Predictive AI",
+        "💬 AI Chat Console"
+    ])
+    
+    # ==================== COMPLIANCE AGENT TAB ====================
     with tab1:
-        st.subheader("Zero-Trust Guardrails Architecture")
+        st.markdown("### 🛡️ Autonomous Compliance Agent")
+        st.markdown("*Continuously monitors and enforces compliance across all accounts*")
         
+        # Agent Status
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown("""
+            <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.5rem;">🟢</span>
+                    <div>
+                        <strong style="color: #059669;">Compliance Agent Active</strong>
+                        <p style="margin: 0; color: #047857; font-size: 0.85rem;">Last scan: 5 minutes ago | Next scan: in 25 minutes</p>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Compliance Frameworks
+            st.markdown("#### Monitored Frameworks")
+            frameworks = [
+                {"name": "CIS AWS Foundations", "score": 87, "findings": 12, "status": "🟢 Passing"},
+                {"name": "PCI-DSS", "score": 92, "findings": 5, "status": "🟢 Passing"},
+                {"name": "SOC 2", "score": 89, "findings": 8, "status": "🟢 Passing"},
+                {"name": "HIPAA", "score": 78, "findings": 18, "status": "🟡 At Risk"},
+                {"name": "AWS Well-Architected", "score": 81, "findings": 15, "status": "🟢 Passing"},
+            ]
+            
+            for fw in frameworks:
+                score_color = "#10b981" if fw['score'] >= 85 else "#f59e0b" if fw['score'] >= 70 else "#ef4444"
+                st.markdown(f"""
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 8px; margin-bottom: 0.5rem;">
+                    <div>
+                        <strong>{fw['name']}</strong>
+                        <span style="color: #64748b; font-size: 0.85rem; margin-left: 0.5rem;">{fw['findings']} findings</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="color: {score_color}; font-weight: bold;">{fw['score']}%</span>
+                        <span>{fw['status']}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("#### Agent Actions")
+            
+            if st.button("🔍 Run Full Compliance Scan", type="primary", use_container_width=True):
+                with st.spinner("🤖 Compliance Agent scanning all accounts..."):
+                    progress = st.progress(0)
+                    status_text = st.empty()
+                    
+                    scan_steps = [
+                        "Connecting to AWS Organizations...",
+                        "Scanning IAM configurations...",
+                        "Checking S3 bucket policies...",
+                        "Analyzing network security...",
+                        "Reviewing encryption settings...",
+                        "Evaluating logging configurations...",
+                        "Generating compliance report..."
+                    ]
+                    
+                    for i, step in enumerate(scan_steps):
+                        status_text.text(f"🔄 {step}")
+                        time.sleep(0.5)
+                        progress.progress((i + 1) / len(scan_steps))
+                    
+                    # Generate AI analysis
+                    prompt = f"""As an autonomous compliance agent, provide a brief compliance scan summary:
+
+Current Environment:
+- Accounts: {stats['total_accounts']}
+- Policies: {stats['total_policies']}
+- Current Compliance: {stats['compliance_score']:.0f}%
+
+Provide:
+1. Overall compliance status (2 sentences)
+2. Top 3 critical findings
+3. Recommended immediate actions
+
+Keep response concise and actionable."""
+                    
+                    analysis = invoke_claude(prompt, max_tokens=1000)
+                    st.success("✅ Compliance scan completed!")
+                    st.markdown(f'<div class="insight-box">{analysis}</div>', unsafe_allow_html=True)
+            
+            if st.button("📋 Generate Audit Report", use_container_width=True):
+                st.info("📄 Generating comprehensive audit report...")
+                time.sleep(1)
+                st.success("Report ready for download!")
+            
+            if st.button("🔔 Configure Alerts", use_container_width=True):
+                st.info("Navigate to Settings → Alerts to configure compliance alerts")
+            
+            st.markdown("---")
+            st.markdown("#### Quick Stats")
+            st.metric("Controls Checked", "1,247")
+            st.metric("Auto-Exceptions", "23")
+            st.metric("Pending Reviews", "8")
+    
+    # ==================== REMEDIATION AGENT TAB ====================
+    with tab2:
+        st.markdown("### 🔧 Autonomous Remediation Agent")
+        st.markdown("*Automatically detects and fixes security misconfigurations*")
+        
+        # Agent Controls
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Implementation Progress", "60%", delta="+15%")
+            auto_remediation = st.toggle("Auto-Remediation Enabled", value=True, help="Allow agent to automatically fix low-risk issues")
         with col2:
-            st.metric("Identity Policies", "450", delta="+85")
+            approval_required = st.toggle("Require Approval (High Risk)", value=True, help="Require human approval for high-risk changes")
         with col3:
-            st.metric("Zero-Trust Score", "72/100", delta="+12")
+            dry_run_mode = st.toggle("Dry Run Mode", value=False, help="Preview changes without applying them")
         
-        if st.button("Generate Zero-Trust Architecture Plan"):
-            with st.spinner("Creating zero-trust architecture..."):
-                prompt = """
-                Design a comprehensive Zero-Trust Architecture plan for AWS environments:
-                
-                Include:
-                1. Identity-centric access model
-                2. Continuous verification strategy
-                3. Micro-segmentation approach
-                4. Policy enforcement points
-                5. Implementation phases
-                6. Metrics and success criteria
-                
-                Focus on AWS native services.
-                """
-                zt_plan = invoke_claude(prompt, max_tokens=3500)
-                st.markdown(f'<div class="insight-box">{zt_plan}</div>', unsafe_allow_html=True)
-    
-    with tab2:
-        st.subheader("🤖 AIOps Platform - Self-Healing Compliance")
+        st.markdown("---")
         
-        col1, col2 = st.columns(2)
+        col1, col2 = st.columns([2, 1])
+        
         with col1:
-            st.metric("AI Models Deployed", "8", delta="+3")
-            st.metric("Automation Rate", "75%", delta="+20%")
-            st.metric("MTTR Reduction", "65%", delta="+15%")
+            st.markdown("#### Pending Remediations")
+            
+            # Initialize remediation queue in session state
+            if 'remediation_queue' not in st.session_state:
+                st.session_state.remediation_queue = [
+                    {"id": "REM-001", "finding": "S3 bucket 'logs-bucket-prod' is publicly accessible", "severity": "Critical", "action": "Enable Block Public Access", "risk": "Low", "account": "111122223333", "auto": True},
+                    {"id": "REM-002", "finding": "EBS volume vol-0abc123 is unencrypted", "severity": "High", "action": "Create encrypted snapshot and replace", "risk": "Medium", "account": "111122223333", "auto": False},
+                    {"id": "REM-003", "finding": "Security group sg-0xyz allows 0.0.0.0/0 on port 22", "severity": "High", "action": "Restrict to approved CIDR ranges", "risk": "High", "account": "222233334444", "auto": False},
+                    {"id": "REM-004", "finding": "IAM user 'legacy-service' has no MFA", "severity": "Medium", "action": "Enforce MFA requirement", "risk": "Low", "account": "222233334444", "auto": True},
+                    {"id": "REM-005", "finding": "CloudTrail logging disabled in us-west-2", "severity": "Medium", "action": "Enable CloudTrail with S3 logging", "risk": "Low", "account": "333344445555", "auto": True},
+                ]
+            
+            for item in st.session_state.remediation_queue:
+                sev_color = {"Critical": "#dc2626", "High": "#f97316", "Medium": "#f59e0b", "Low": "#22c55e"}[item['severity']]
+                risk_color = {"Low": "#10b981", "Medium": "#f59e0b", "High": "#ef4444"}[item['risk']]
+                
+                with st.expander(f"{'🤖' if item['auto'] else '👤'} {item['finding'][:50]}... ({item['severity']})"):
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.markdown(f"**Finding:** {item['finding']}")
+                        st.markdown(f"**Account:** `{item['account']}`")
+                        st.markdown(f"**Severity:** <span style='color: {sev_color};'>{item['severity']}</span>", unsafe_allow_html=True)
+                    with col_b:
+                        st.markdown(f"**Proposed Action:** {item['action']}")
+                        st.markdown(f"**Risk Level:** <span style='color: {risk_color};'>{item['risk']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"**Mode:** {'🤖 Auto-remediate' if item['auto'] else '👤 Requires approval'}")
+                    
+                    btn_col1, btn_col2, btn_col3 = st.columns(3)
+                    with btn_col1:
+                        if st.button("✅ Approve & Execute", key=f"approve_{item['id']}", use_container_width=True):
+                            with st.spinner(f"🤖 Agent executing: {item['action']}..."):
+                                time.sleep(1.5)
+                                st.success(f"✅ Remediation completed for {item['id']}")
+                    with btn_col2:
+                        if st.button("👁️ Preview Script", key=f"preview_{item['id']}", use_container_width=True):
+                            # Generate remediation script
+                            prompt = f"""Generate a brief AWS CLI or boto3 remediation script for:
+Finding: {item['finding']}
+Action: {item['action']}
+
+Provide just the essential commands (max 10 lines)."""
+                            script = invoke_claude(prompt, max_tokens=500)
+                            st.code(script, language="bash")
+                    with btn_col3:
+                        if st.button("❌ Dismiss", key=f"dismiss_{item['id']}", use_container_width=True):
+                            st.warning(f"Dismissed {item['id']}")
+        
         with col2:
-            st.metric("Predictions Accuracy", "92%", delta="+5%")
-            st.metric("False Positives", "8%", delta="-12%")
-            st.metric("Cost Savings", "$450K/year", delta="+$150K")
-        
-        aiops_feature = st.selectbox("AIOps Feature",
-            ["Anomaly Detection", "Predictive Compliance", "Auto-Remediation", 
-             "Intelligent Alerting", "Root Cause Analysis"])
-        
-        if st.button("Design AIOps Solution"):
-            with st.spinner("Designing solution..."):
-                prompt = f"""
-                Design an AIOps solution for {aiops_feature} in AWS guardrails:
-                
-                Requirements:
-                - Use Claude AI for intelligent analysis and automation
-                - Integrate with guardrails infrastructure
-                - Include data pipeline architecture
-                
-                Deliverables:
-                1. Architecture description
-                2. Implementation approach
-                3. Code examples
-                4. Success metrics
-                """
-                solution = invoke_claude(prompt, max_tokens=3500)
-                st.markdown(f'<div class="insight-box">{solution}</div>', unsafe_allow_html=True)
+            st.markdown("#### Agent Statistics")
+            
+            st.markdown("""
+            <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                <p style="margin: 0; color: #166534; font-size: 2rem; font-weight: bold;">89</p>
+                <p style="margin: 0; color: #15803d;">Auto-remediations this month</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("**By Severity:**")
+            st.progress(0.85, text="Critical: 12 fixed")
+            st.progress(0.72, text="High: 34 fixed")
+            st.progress(0.90, text="Medium: 43 fixed")
+            
+            st.markdown("---")
+            st.markdown("**Success Rate:** 98.2%")
+            st.markdown("**Avg Time to Remediate:** 4.2 min")
+            st.markdown("**Rollbacks:** 2 (this month)")
+            
+            if st.button("🚀 Run Batch Remediation", type="primary", use_container_width=True):
+                low_risk_items = [i for i in st.session_state.remediation_queue if i['risk'] == 'Low']
+                with st.spinner(f"🤖 Agent processing {len(low_risk_items)} low-risk remediations..."):
+                    time.sleep(2)
+                st.success(f"✅ Completed {len(low_risk_items)} auto-remediations!")
     
+    # ==================== ZERO-TRUST AGENT TAB ====================
     with tab3:
-        st.subheader("👥 Human-AI Collaboration")
+        st.markdown("### 🎯 Zero-Trust Architecture Agent")
+        st.markdown("*Autonomous assessment and implementation of Zero-Trust principles*")
+        
+        # Zero-Trust Score
+        zt_score = 72
+        zt_color = "#f59e0b" if zt_score < 80 else "#10b981"
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown(f"""
+            <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, {zt_color}20, {zt_color}10); border-radius: 16px; border: 2px solid {zt_color};">
+                <p style="margin: 0; color: #64748b; font-size: 1rem;">Zero-Trust Maturity Score</p>
+                <p style="font-size: 4rem; font-weight: bold; color: {zt_color}; margin: 0.5rem 0;">{zt_score}/100</p>
+                <p style="color: {zt_color}; margin: 0;">Intermediate - Improvement Opportunities</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Zero-Trust Pillars
+        st.markdown("#### Zero-Trust Pillars Assessment")
+        
+        pillars = [
+            {"name": "Identity", "score": 85, "status": "Strong", "icon": "👤", "findings": 5},
+            {"name": "Devices", "score": 68, "status": "Moderate", "icon": "💻", "findings": 12},
+            {"name": "Networks", "score": 72, "status": "Moderate", "icon": "🌐", "findings": 8},
+            {"name": "Applications", "score": 78, "status": "Good", "icon": "📱", "findings": 6},
+            {"name": "Data", "score": 65, "status": "Needs Work", "icon": "💾", "findings": 15},
+            {"name": "Visibility", "score": 70, "status": "Moderate", "icon": "👁️", "findings": 10},
+        ]
+        
+        cols = st.columns(3)
+        for i, pillar in enumerate(pillars):
+            with cols[i % 3]:
+                score_color = "#10b981" if pillar['score'] >= 80 else "#f59e0b" if pillar['score'] >= 60 else "#ef4444"
+                st.markdown(f"""
+                <div style="background: white; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+                    <span style="font-size: 2rem;">{pillar['icon']}</span>
+                    <h4 style="margin: 0.5rem 0;">{pillar['name']}</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: {score_color}; margin: 0;">{pillar['score']}%</p>
+                    <p style="color: #64748b; font-size: 0.85rem; margin: 0;">{pillar['findings']} findings</p>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
         
         col1, col2 = st.columns(2)
+        
         with col1:
-            st.metric("AI Adoption Rate", "40%", delta="+15%")
-            st.metric("Efficiency Gain", "35%", delta="+10%")
+            st.markdown("#### 🤖 Agent Assessment")
+            assessment_target = st.selectbox("Assessment Target", 
+                ["Full Environment", "Identity & Access", "Network Security", "Data Protection", "Specific Account"])
+            
+            if st.button("🔍 Run Zero-Trust Assessment", type="primary"):
+                with st.spinner("🤖 Zero-Trust Agent analyzing environment..."):
+                    prompt = f"""As a Zero-Trust Architecture Agent, analyze the following and provide recommendations:
+
+Target: {assessment_target}
+Current Zero-Trust Score: {zt_score}/100
+
+Provide:
+1. Current state summary (2 sentences)
+2. Top 3 gaps in Zero-Trust implementation
+3. Prioritized recommendations with AWS services
+4. Expected score improvement
+
+Focus on practical, implementable actions."""
+                    
+                    analysis = invoke_claude(prompt, max_tokens=1500)
+                    st.markdown(f'<div class="insight-box">{analysis}</div>', unsafe_allow_html=True)
+        
         with col2:
-            st.metric("User Satisfaction", "4.5/5.0", delta="+0.5")
-            st.metric("Time Saved", "12 hrs/week", delta="+4 hrs")
-        
-        scenario = st.selectbox("Collaboration Scenario",
-            ["Policy Review & Approval", "Incident Investigation", "Compliance Audit Prep",
-             "Architecture Review", "Risk Assessment"])
-        
-        query = st.text_area("Ask Your AI Compliance Advisor",
-            placeholder="E.g., How should we approach the upcoming PCI DSS audit?", height=100)
-        
-        if st.button("Get AI Advisor Response"):
-            if query:
-                with st.spinner("Thinking..."):
-                    prompt = f"""
-                    You are an expert AI Compliance Advisor for AWS guardrails.
-                    
-                    Scenario: {scenario}
-                    Question: {query}
-                    
-                    Context: {stats['total_accounts']} AWS accounts, {stats['total_policies']} policies, 
-                    {stats['compliance_score']:.0f}% compliance score
-                    
-                    Provide a comprehensive, actionable response with specific AWS recommendations.
-                    """
-                    response = invoke_claude(prompt, max_tokens=2500)
-                    st.markdown(f'<div class="insight-box">{response}</div>', unsafe_allow_html=True)
+            st.markdown("#### Quick Actions")
+            
+            if st.button("📋 Generate Zero-Trust Roadmap", use_container_width=True):
+                with st.spinner("Generating roadmap..."):
+                    prompt = """Create a 90-day Zero-Trust implementation roadmap for AWS:
+
+Week 1-2: Quick wins
+Week 3-4: Identity hardening
+Month 2: Network segmentation
+Month 3: Data protection & monitoring
+
+Provide specific AWS actions for each phase."""
+                    roadmap = invoke_claude(prompt, max_tokens=1500)
+                    st.markdown(f'<div class="insight-box">{roadmap}</div>', unsafe_allow_html=True)
+            
+            if st.button("🛡️ Enable Identity-First Controls", use_container_width=True):
+                st.success("✅ Initiated: MFA enforcement, role-based access review, session policies")
+            
+            if st.button("🌐 Implement Network Microsegmentation", use_container_width=True):
+                st.info("🔄 Agent analyzing VPC configurations and security groups...")
     
+    # ==================== FINOPS AGENT TAB ====================
     with tab4:
-        st.subheader("💰 FinOps-Security-Compliance Convergence")
+        st.markdown("### 💰 FinOps Optimization Agent")
+        st.markdown("*Autonomous cost optimization while maintaining security and compliance*")
         
+        # Cost Overview
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Cost Visibility", "85%")
+            st.metric("Monthly Spend", "$156,000", delta="-8% optimized")
         with col2:
-            st.metric("Security Score", "88%")
+            st.metric("Identified Savings", "$23,400", delta="Actionable")
         with col3:
-            st.metric("Compliance Rate", "92%")
+            st.metric("Realized Savings", "$45,200", delta="YTD")
         with col4:
-            st.metric("Waste Reduction", "$2.5M/year")
+            st.metric("Waste Score", "12%", delta="-5%")
         
-        convergence_data = pd.DataFrame({
-            'Month': pd.date_range(start='2024-06-01', periods=6, freq='ME'),
-            'Cost Optimization': [65, 70, 73, 78, 82, 85],
-            'Security Posture': [75, 78, 82, 84, 86, 88],
-            'Compliance Score': [80, 83, 86, 89, 90, 92]
-        })
+        st.markdown("---")
         
-        fig = px.line(convergence_data, x='Month', y=['Cost Optimization', 'Security Posture', 'Compliance Score'],
-                     title='FinOps-Security-Compliance Convergence')
-        st.plotly_chart(fig, width="stretch")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.markdown("#### 🤖 AI-Identified Savings Opportunities")
+            
+            savings_opps = [
+                {"category": "Idle Resources", "savings": "$8,500/mo", "risk": "Low", "action": "Terminate 23 idle EC2 instances", "auto": True},
+                {"category": "Right-sizing", "savings": "$6,200/mo", "risk": "Medium", "action": "Downsize 45 over-provisioned instances", "auto": False},
+                {"category": "Reserved Instances", "savings": "$4,800/mo", "risk": "Low", "action": "Purchase RIs for stable workloads", "auto": False},
+                {"category": "Storage Optimization", "savings": "$2,100/mo", "risk": "Low", "action": "Move 5TB to S3 Glacier", "auto": True},
+                {"category": "Unused EBS Volumes", "savings": "$1,800/mo", "risk": "Low", "action": "Delete 34 unattached volumes", "auto": True},
+            ]
+            
+            for opp in savings_opps:
+                risk_color = {"Low": "#10b981", "Medium": "#f59e0b", "High": "#ef4444"}[opp['risk']]
+                
+                with st.expander(f"{'🤖' if opp['auto'] else '👤'} {opp['category']} - {opp['savings']}"):
+                    st.markdown(f"**Action:** {opp['action']}")
+                    st.markdown(f"**Risk Level:** <span style='color: {risk_color};'>{opp['risk']}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**Monthly Savings:** {opp['savings']}")
+                    
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        if st.button("✅ Implement", key=f"impl_fin_{opp['category']}", use_container_width=True):
+                            st.success(f"🤖 Agent implementing: {opp['action']}")
+                    with col_b:
+                        if st.button("📊 Analyze Impact", key=f"analyze_fin_{opp['category']}", use_container_width=True):
+                            st.info("Analyzing security and compliance impact...")
+        
+        with col2:
+            st.markdown("#### Agent Controls")
+            
+            st.toggle("Auto-optimize Idle Resources", value=True)
+            st.toggle("Auto-archive Cold Storage", value=True)
+            st.toggle("RI Purchase Recommendations", value=False)
+            
+            st.markdown("---")
+            
+            if st.button("🚀 Run Full Cost Analysis", type="primary", use_container_width=True):
+                with st.spinner("🤖 FinOps Agent analyzing all accounts..."):
+                    prompt = """As a FinOps optimization agent, provide a brief cost analysis:
+
+Provide:
+1. Top 3 cost drivers
+2. Top 3 savings opportunities with estimated amounts
+3. Security/compliance considerations for each recommendation
+4. Quick wins (implementable today)
+
+Keep response actionable and concise."""
+                    
+                    analysis = invoke_claude(prompt, max_tokens=1000)
+                    st.markdown(f'<div class="insight-box">{analysis}</div>', unsafe_allow_html=True)
+            
+            if st.button("📈 Generate FinOps Report", use_container_width=True):
+                st.success("Report generated!")
+    
+    # ==================== PREDICTIVE AI TAB ====================
+    with tab5:
+        st.markdown("### 🧠 Predictive Intelligence")
+        st.markdown("*AI-powered predictions for security, compliance, and costs*")
+        
+        pred_tabs = st.tabs(["🛡️ Security Risks", "📋 Compliance Drift", "💰 Cost Forecast", "📈 Capacity"])
+        
+        with pred_tabs[0]:
+            st.markdown("#### Predicted Security Risks (Next 30 Days)")
+            
+            risk_score = 72
+            risk_color = "#f59e0b" if risk_score < 80 else "#10b981"
+            
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.markdown(f"""
+                <div style="text-align: center; padding: 1.5rem; background: {risk_color}20; border-radius: 12px;">
+                    <p style="margin: 0; color: #64748b;">Risk Score</p>
+                    <p style="font-size: 3rem; font-weight: bold; color: {risk_color}; margin: 0;">{risk_score}</p>
+                    <p style="color: {risk_color}; margin: 0;">Moderate Risk</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                risks = [
+                    {"risk": "IAM credential exposure", "probability": 78, "impact": "Critical"},
+                    {"risk": "S3 misconfiguration", "probability": 65, "impact": "High"},
+                    {"risk": "Outdated AMIs", "probability": 82, "impact": "Medium"},
+                ]
+                for r in risks:
+                    impact_color = {"Critical": "#dc2626", "High": "#f97316", "Medium": "#f59e0b"}[r['impact']]
+                    st.markdown(f"**{r['risk']}** - {r['probability']}% likely")
+                    st.progress(r['probability'] / 100)
+        
+        with pred_tabs[1]:
+            st.markdown("#### Compliance Drift Forecast")
+            
+            drift_data = pd.DataFrame({
+                'Framework': ['PCI-DSS', 'SOC 2', 'HIPAA', 'CIS'],
+                'Current': [92, 89, 85, 87],
+                'Predicted (30d)': [90, 86, 81, 85]
+            })
+            
+            fig = px.bar(drift_data, x='Framework', y=['Current', 'Predicted (30d)'],
+                        barmode='group', title='Compliance Score Forecast',
+                        color_discrete_map={'Current': '#10b981', 'Predicted (30d)': '#f59e0b'})
+            st.plotly_chart(fig, use_container_width=True)
+            
+            if st.button("🤖 Get AI Prevention Plan"):
+                prompt = """Analyze compliance drift and provide prevention recommendations:
+
+Current scores: PCI-DSS 92%, SOC2 89%, HIPAA 85%, CIS 87%
+Predicted: PCI-DSS 90%, SOC2 86%, HIPAA 81%, CIS 85%
+
+Provide:
+1. Root causes of predicted drift
+2. Top 3 preventive actions
+3. Timeline for implementation"""
+                
+                plan = invoke_claude(prompt, max_tokens=1000)
+                st.markdown(f'<div class="insight-box">{plan}</div>', unsafe_allow_html=True)
+        
+        with pred_tabs[2]:
+            st.markdown("#### Cost Forecast")
+            
+            cost_data = pd.DataFrame({
+                'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                'Actual': [145000, 152000, 156000, None, None, None],
+                'Predicted': [145000, 152000, 156000, 162000, 168000, 175000],
+                'Optimized': [145000, 152000, 156000, 155000, 158000, 160000]
+            })
+            
+            fig = px.line(cost_data, x='Month', y=['Actual', 'Predicted', 'Optimized'],
+                         title='Cost Projection with AI Optimization')
+            st.plotly_chart(fig, use_container_width=True)
+            
+            st.info("💡 AI predicts $15,000 savings potential through optimization recommendations")
+        
+        with pred_tabs[3]:
+            st.markdown("#### Capacity Planning")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.warning("⚠️ EC2 capacity will reach 95% by April")
+                st.info("💡 Recommend: Purchase 10 additional Reserved Instances")
+            with col2:
+                st.success("✅ RDS capacity sufficient for 6 months")
+                st.success("✅ S3 storage on track")
+    
+    # ==================== AI CHAT CONSOLE TAB ====================
+    with tab6:
+        st.markdown("### 💬 AI Command Console")
+        st.markdown("*True Agentic AI with autonomous tool execution and investigation capabilities*")
+        
+        # Initialize chat history and tool history for Transform page
+        if "transform_agent_messages" not in st.session_state:
+            st.session_state.transform_agent_messages = []
+        if "transform_tool_history" not in st.session_state:
+            st.session_state.transform_tool_history = []
+        
+        # Mode selection
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            selected_agent = st.selectbox("Select Agent", 
+                ["🤖 Security Agent (Full Agentic)", "🛡️ Compliance Agent", "🔧 Remediation Agent", 
+                 "🎯 Zero-Trust Agent", "💰 FinOps Agent", "🧠 Predictive AI"])
+        with col2:
+            use_tools = st.toggle("Enable Tool Use", value=True, help="Allow agent to query database and execute tools")
+        
+        # Display chat history
+        for msg in st.session_state.transform_agent_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                if msg.get("tools_used"):
+                    with st.expander(f"🔧 Tools Used ({len(msg['tools_used'])})"):
+                        for tool in msg["tools_used"]:
+                            st.markdown(f"**{tool['tool']}**")
+                            st.json(tool['input'])
+        
+        # Chat input
+        if prompt := st.chat_input(f"Ask {selected_agent}..."):
+            st.session_state.transform_agent_messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            with st.chat_message("assistant"):
+                with st.spinner(f"🤖 {selected_agent} investigating..."):
+                    # Use agentic loop for full capability or simple prompt for others
+                    if use_tools and selected_agent == "🤖 Security Agent (Full Agentic)":
+                        # Full agentic mode with tool calling
+                        response, tool_history = run_agentic_loop(prompt)
+                        st.markdown(response)
+                        
+                        if tool_history:
+                            with st.expander(f"🔧 Tools Executed ({len(tool_history)})"):
+                                for tool in tool_history:
+                                    st.markdown(f"**{tool['tool']}**")
+                                    st.json(tool['input'])
+                            st.session_state.transform_tool_history.extend(tool_history)
+                        
+                        st.session_state.transform_agent_messages.append({
+                            "role": "assistant", 
+                            "content": response,
+                            "tools_used": tool_history
+                        })
+                    else:
+                        # Agent-specific prompts
+                        agent_context = {
+                            "🛡️ Compliance Agent": "You are an autonomous Compliance Agent. Focus on compliance frameworks, audit readiness, and policy enforcement.",
+                            "🔧 Remediation Agent": "You are an autonomous Remediation Agent. Focus on security fixes, automated remediation, and risk mitigation.",
+                            "🎯 Zero-Trust Agent": "You are a Zero-Trust Architecture Agent. Focus on identity-centric security, microsegmentation, and continuous verification.",
+                            "💰 FinOps Agent": "You are a FinOps Optimization Agent. Focus on cost optimization while maintaining security and compliance.",
+                            "🧠 Predictive AI": "You are a Predictive Intelligence Agent. Focus on forecasting risks, compliance drift, and cost trends.",
+                            "🤖 Security Agent (Full Agentic)": "You are a comprehensive Security Agent with full tool access."
+                        }
+                        
+                        system_prompt = f"""{agent_context.get(selected_agent, agent_context["🤖 Security Agent (Full Agentic)"])}
+
+Environment Context:
+- Accounts: {stats['total_accounts']}
+- Policies: {stats['total_policies']}
+- Compliance Score: {stats['compliance_score']:.0f}%
+
+User Query: {prompt}
+
+Provide a helpful, actionable response. Include specific AWS recommendations where applicable."""
+                        
+                        response = invoke_claude(system_prompt, max_tokens=2000)
+                        st.markdown(response)
+                        st.session_state.transform_agent_messages.append({"role": "assistant", "content": response})
+        
+        # Quick Investigation Workflows
+        st.markdown("---")
+        st.markdown("**🔍 Quick Investigations:**")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            if st.button("🔴 Critical Findings", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Show me all critical security findings and provide recommendations for the most urgent ones."
+                })
+                st.rerun()
+        with col2:
+            if st.button("📋 Compliance Scan", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Run a compliance assessment across all frameworks and identify gaps."
+                })
+                st.rerun()
+        with col3:
+            if st.button("💰 Cost Savings", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Analyze our cloud costs and identify optimization opportunities with estimated savings."
+                })
+                st.rerun()
+        with col4:
+            if st.button("🗑️ Clear Chat", use_container_width=True):
+                st.session_state.transform_agent_messages = []
+                st.session_state.transform_tool_history = []
+                st.rerun()
+        
+        # Additional Quick Commands
+        st.markdown("**⚡ Quick Commands:**")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            if st.button("🛡️ Security Posture", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Analyze our overall security posture. What are the biggest risks and priorities?"
+                })
+                st.rerun()
+        with col2:
+            if st.button("🎯 Zero-Trust Gap", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Assess our Zero-Trust architecture implementation. What gaps exist?"
+                })
+                st.rerun()
+        with col3:
+            if st.button("🔧 Remediation Plan", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Create a prioritized remediation plan for our top 5 security issues."
+                })
+                st.rerun()
+        with col4:
+            if st.button("📊 Executive Summary", use_container_width=True):
+                st.session_state.transform_agent_messages.append({
+                    "role": "user", "content": "Generate an executive summary of our security and compliance status."
+                })
+                st.rerun()
+        
+        # Tool History
+        if st.session_state.transform_tool_history:
+            with st.expander(f"📋 Session Tool History ({len(st.session_state.transform_tool_history)} executions)"):
+                for i, tool in enumerate(reversed(st.session_state.transform_tool_history[-10:])):
+                    st.markdown(f"**{i+1}. {tool['tool']}**")
+                    st.code(json.dumps(tool['input'], indent=2)[:200] + "...", language="json")
 
 # ==================== AI POLICY ADVISOR PAGE ====================
 # ==================== FINOPS CENTER PAGE ====================
@@ -5101,430 +5607,12 @@ elif page == "🏢 Multi-Account Manager":
         
         st.dataframe(history_df, use_container_width=True, hide_index=True)
 
-# ==================== AI PREDICTIONS PAGE ====================
-elif page == "🧠 AI Predictions":
-    st.markdown('<div class="main-header">🧠 AI Predictions Engine</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Proactive Insights - Cost, Security, Compliance, Capacity</div>', unsafe_allow_html=True)
-    
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "💰 Cost Predictions", "🛡️ Security Risk", "📋 Compliance Drift",
-        "📈 Capacity Planning", "🚨 Proactive Alerts"
-    ])
-    
-    with tab1:
-        st.subheader("💰 Cost Predictions")
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Current Month Forecast", "$156,000", delta="+8% vs budget")
-        with col2:
-            st.metric("Next Month Prediction", "$168,000", delta="+7.7%")
-        with col3:
-            st.metric("Q1 2025 Projection", "$520,000", delta="+12%")
-        
-        if st.button("🤖 Generate AI Cost Prediction"):
-            with st.spinner("Analyzing cost patterns..."):
-                prompt = """Analyze typical enterprise AWS cost patterns and provide:
 
-1. 30-day cost forecast with confidence interval
-2. Key cost drivers
-3. Anomaly predictions
-4. Optimization opportunities
-5. Budget risk assessment
+# ==================== AI FEATURES CONSOLIDATED ====================
+# NOTE: AI features (Predictions, Policy Advisor, Security Agent) are now 
+# consolidated into the 🚀 Transform Phase - AI Command Center
+# This provides a unified AI experience with all agentic capabilities in one place.
 
-Be specific with numbers and percentages."""
-                
-                prediction = invoke_claude(prompt, max_tokens=2000)
-                st.markdown(f'<div class="insight-box">{prediction}</div>', unsafe_allow_html=True)
-    
-    with tab2:
-        st.subheader("🛡️ Security Risk Predictions")
-        
-        risk_score = 72
-        risk_color = "#f59e0b" if risk_score < 80 else "#10b981"
-        
-        st.markdown(f"""
-        <div style="text-align: center; padding: 2rem; background: {risk_color}20; border-radius: 12px; margin-bottom: 1rem;">
-            <h2 style="color: {risk_color}; margin: 0;">Security Risk Score</h2>
-            <p style="font-size: 4rem; font-weight: bold; color: {risk_color}; margin: 0;">{risk_score}/100</p>
-            <p style="color: #94a3b8;">Moderate Risk - Action Recommended</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("#### Predicted Risks (Next 30 Days)")
-        risks = [
-            {"risk": "IAM credential exposure", "probability": "High", "impact": "Critical", "recommendation": "Enable MFA enforcement"},
-            {"risk": "S3 bucket misconfiguration", "probability": "Medium", "impact": "High", "recommendation": "Review public access settings"},
-            {"risk": "Outdated AMI vulnerabilities", "probability": "High", "impact": "Medium", "recommendation": "Schedule patching"},
-        ]
-        st.dataframe(pd.DataFrame(risks), use_container_width=True, hide_index=True)
-    
-    with tab3:
-        st.subheader("📋 Compliance Drift Predictions")
-        
-        st.markdown("#### Predicted Compliance Degradation")
-        
-        drift_df = pd.DataFrame({
-            'Framework': ['PCI-DSS', 'SOC 2', 'HIPAA', 'ISO 27001'],
-            'Current': [96, 94, 92, 95],
-            'Predicted (30 days)': [94, 92, 89, 93],
-            'Risk': ['Low', 'Medium', 'High', 'Low']
-        })
-        
-        st.dataframe(drift_df, use_container_width=True, hide_index=True)
-        
-        if st.button("🤖 Analyze Drift Causes"):
-            with st.spinner("Analyzing..."):
-                prompt = """Analyze potential compliance drift causes and provide:
-
-1. Root causes of predicted compliance degradation
-2. Specific controls at risk
-3. Recommended preventive actions
-4. Timeline for remediation"""
-                
-                analysis = invoke_claude(prompt, max_tokens=1500)
-                st.markdown(f'<div class="insight-box">{analysis}</div>', unsafe_allow_html=True)
-    
-    with tab4:
-        st.subheader("📈 Capacity Planning")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### Compute Capacity Forecast")
-            capacity_df = pd.DataFrame({
-                'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                'Current Capacity': [70, 75, 78, 82, 85, 88],
-                'Predicted Usage': [72, 78, 85, 92, 98, 105]
-            })
-            fig = px.line(capacity_df, x='Month', y=['Current Capacity', 'Predicted Usage'],
-                         title='EC2 Capacity Utilization Forecast')
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("#### Recommendations")
-            st.warning("⚠️ EC2 capacity will exceed 100% by May 2025")
-            st.info("💡 Consider purchasing Reserved Instances for 15% savings")
-            st.success("✅ RDS capacity is sufficient for next 6 months")
-    
-    with tab5:
-        st.subheader("🚨 Proactive Alerts")
-        
-        alerts = [
-            {"severity": "Critical", "type": "Cost", "message": "Budget overrun predicted in 5 days", "action": "Review spending"},
-            {"severity": "High", "type": "Security", "message": "3 IAM keys expiring this week", "action": "Rotate keys"},
-            {"severity": "Medium", "type": "Compliance", "message": "HIPAA audit in 30 days - 5 controls need attention", "action": "Start remediation"},
-            {"severity": "Low", "type": "Capacity", "message": "S3 storage growth above forecast", "action": "Review lifecycle policies"},
-        ]
-        
-        for alert in alerts:
-            severity_color = {"Critical": "#dc2626", "High": "#f97316", "Medium": "#f59e0b", "Low": "#10b981"}[alert['severity']]
-            
-            st.markdown(f"""
-            <div style="background: {severity_color}20; border-left: 4px solid {severity_color}; padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px;">
-                <strong style="color: {severity_color};">[{alert['severity']}] {alert['type']}</strong>
-                <p style="margin: 0.5rem 0;">{alert['message']}</p>
-                <p style="color: #64748b; margin: 0; font-size: 0.9rem;">Recommended: {alert['action']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ==================== AI POLICY ADVISOR PAGE ====================
-elif page == "🤖 AI Policy Advisor":
-    st.markdown('<div class="main-header">🤖 AI Policy Advisor</div>', unsafe_allow_html=True)
-    st.markdown("**Your intelligent assistant for policy creation, analysis, and optimization**")
-    
-    advisor_mode = st.radio("Select Mode",
-        ["💡 Policy Creation", "🔍 Policy Analysis", "⚡ Quick Optimization", "📚 Knowledge Base"],
-        horizontal=True)
-    
-    if advisor_mode == "💡 Policy Creation":
-        st.subheader("Create New Policy with AI")
-        
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            business_requirement = st.text_area("Business Requirement",
-                placeholder="E.g., Ensure all production databases are encrypted and only accessible from approved IP ranges...",
-                height=150)
-            affected_services = st.multiselect("AWS Services",
-                ["EC2", "S3", "RDS", "Lambda", "DynamoDB", "EKS", "IAM", "CloudTrail", "VPC"])
-        with col2:
-            policy_enforcement = st.selectbox("Enforcement Level",
-                ["Preventive (SCP)", "Detective (Config Rule)", "Corrective (Lambda)"])
-            environment = st.multiselect("Target Environment",
-                ["Production", "Development", "Test", "Staging"])
-            exceptions_allowed = st.checkbox("Allow Exceptions")
-        
-        if st.button("Generate Comprehensive Policy Package", type="primary"):
-            if business_requirement:
-                with st.spinner("Creating policy package..."):
-                    prompt = f"""
-                    Create a comprehensive AWS guardrail policy package:
-                    
-                    Business Requirement: {business_requirement}
-                    AWS Services: {', '.join(affected_services)}
-                    Enforcement: {policy_enforcement}
-                    Environments: {', '.join(environment)}
-                    Exceptions: {'Allowed' if exceptions_allowed else 'Not Allowed'}
-                    
-                    Deliverables:
-                    1. Service Control Policy (SCP) JSON
-                    2. AWS Config Rule (if applicable)
-                    3. Lambda remediation function
-                    4. IAM policies required
-                    5. Implementation guide
-                    """
-                    package = invoke_claude(prompt, max_tokens=4000)
-                    st.markdown(f'<div class="insight-box">{package}</div>', unsafe_allow_html=True)
-                    st.download_button("📥 Download Policy Package", package,
-                                      file_name=f"policy_package_{datetime.now().strftime('%Y%m%d')}.txt")
-    
-    elif advisor_mode == "🔍 Policy Analysis":
-        st.subheader("Analyze Existing Policy")
-        
-        existing_policy = st.text_area("Paste Policy JSON/Code", height=200)
-        analysis_type = st.multiselect("Analysis Type",
-            ["Security Assessment", "Compliance Check", "Best Practices Review", 
-             "Performance Impact", "Risk Analysis"])
-        
-        if st.button("Analyze Policy"):
-            if existing_policy and analysis_type:
-                with st.spinner("Analyzing..."):
-                    prompt = f"""
-                    Analyze this AWS policy:
-                    
-                    Policy: {existing_policy}
-                    Analysis Focus: {', '.join(analysis_type)}
-                    
-                    Provide:
-                    1. Summary of what the policy does
-                    2. Security strengths and weaknesses
-                    3. Compliance gaps
-                    4. Optimization recommendations
-                    5. Severity rating
-                    """
-                    analysis = invoke_claude(prompt, max_tokens=3000)
-                    st.markdown(f'<div class="insight-box">{analysis}</div>', unsafe_allow_html=True)
-    
-    elif advisor_mode == "⚡ Quick Optimization":
-        st.subheader("Quick Policy Optimization")
-        
-        quick_scenario = st.selectbox("Select Scenario",
-            ["Reduce S3 public access risks", "Strengthen IAM policies", "Improve encryption coverage",
-             "Optimize CloudTrail logging", "Enhance network security", "Implement least privilege"])
-        
-        current_maturity = st.select_slider("Current Maturity", options=["Basic", "Intermediate", "Advanced", "Expert"])
-        
-        if st.button("Get Instant Recommendations"):
-            with st.spinner("Generating..."):
-                prompt = f"""
-                Provide quick recommendations for: {quick_scenario}
-                Current Maturity: {current_maturity}
-                
-                Format as:
-                1. Top 3 immediate actions
-                2. Tools/Services to use
-                3. Expected impact
-                4. Timeline
-                """
-                recommendations = invoke_claude(prompt, max_tokens=1500)
-                st.markdown(f'<div class="insight-box">{recommendations}</div>', unsafe_allow_html=True)
-    
-    else:  # Knowledge Base
-        st.subheader("📚 Guardrails Knowledge Base")
-        
-        query = st.text_area("What would you like to know?",
-            placeholder="E.g., What are the differences between SCPs and IAM policies?", height=100)
-        
-        if st.button("Search Knowledge Base"):
-            if query:
-                with st.spinner("Searching..."):
-                    prompt = f"""
-                    Answer this question about AWS guardrails comprehensively:
-                    
-                    Question: {query}
-                    
-                    Provide:
-                    1. Clear explanation
-                    2. Real-world examples
-                    3. Best practices
-                    4. Common pitfalls
-                    5. Related topics
-                    """
-                    answer = invoke_claude(prompt, max_tokens=3000)
-                    st.markdown(f'<div class="insight-box">{answer}</div>', unsafe_allow_html=True)
-
-# ==================== ACCOUNTS PAGE ====================
-# ==================== AI SECURITY AGENT PAGE ====================
-elif page == "🦾 AI Security Agent":
-    st.markdown('<div class="main-header">🦾 AI Security Agent</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Autonomous Security Investigation & Remediation powered by Claude</div>', unsafe_allow_html=True)
-    
-    # Agent capabilities overview
-    st.markdown("""
-    <div class="insight-box">
-    <strong>🤖 Agentic AI Capabilities:</strong><br>
-    This agent can autonomously investigate security issues, analyze resources, generate remediation scripts, 
-    and manage policies. It uses Claude's tool-use capabilities to interact with your AWS environment.
-    </div>
-    """, unsafe_allow_html=True)
-    
-    tab1, tab2, tab3, tab4 = st.tabs(["💬 Agent Chat", "🔍 Quick Investigation", "📋 Tool History", "ℹ️ Available Tools"])
-    
-    with tab1:
-        st.subheader("Chat with AI Security Agent")
-        st.markdown("Ask the agent to investigate issues, analyze findings, or generate remediation plans.")
-        
-        # Initialize chat history
-        if "agent_messages" not in st.session_state:
-            st.session_state.agent_messages = []
-        if "agent_tool_history" not in st.session_state:
-            st.session_state.agent_tool_history = []
-        
-        # Display chat history
-        for msg in st.session_state.agent_messages:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-        
-        # Chat input
-        if prompt := st.chat_input("Ask the AI Security Agent..."):
-            # Add user message
-            st.session_state.agent_messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-            
-            # Get agent response
-            with st.chat_message("assistant"):
-                with st.spinner("🤖 Agent is investigating..."):
-                    response, tool_history = run_agentic_loop(prompt)
-                    st.markdown(response)
-                    
-                    # Show tools used
-                    if tool_history:
-                        with st.expander(f"🔧 Tools Used ({len(tool_history)})"):
-                            for tool in tool_history:
-                                st.markdown(f"**{tool['tool']}**")
-                                st.json(tool['input'])
-                    
-                    st.session_state.agent_tool_history.extend(tool_history)
-            
-            st.session_state.agent_messages.append({"role": "assistant", "content": response})
-        
-        # Quick action buttons
-        st.markdown("---")
-        st.markdown("**Quick Actions:**")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("🔴 Show Critical Findings", key="agent_critical"):
-                st.session_state.agent_messages.append({
-                    "role": "user", 
-                    "content": "Show me all critical security findings and provide recommendations for the most urgent ones."
-                })
-                st.rerun()
-        
-        with col2:
-            if st.button("📊 Compliance Summary", key="agent_compliance"):
-                st.session_state.agent_messages.append({
-                    "role": "user", 
-                    "content": "Give me a compliance summary for the last 30 days including trends and top issues to address."
-                })
-                st.rerun()
-        
-        with col3:
-            if st.button("🛡️ Security Posture", key="agent_posture"):
-                st.session_state.agent_messages.append({
-                    "role": "user", 
-                    "content": "Analyze our overall security posture. What are the biggest risks and what should we prioritize?"
-                })
-                st.rerun()
-        
-        if st.button("🗑️ Clear Chat History"):
-            st.session_state.agent_messages = []
-            st.session_state.agent_tool_history = []
-            st.rerun()
-    
-    with tab2:
-        st.subheader("Quick Investigation")
-        st.markdown("Select a pre-built investigation workflow.")
-        
-        investigation_type = st.selectbox(
-            "Investigation Type",
-            ["S3 Security Assessment", "IAM Risk Analysis", "Network Exposure Check", 
-             "Encryption Compliance", "Account Security Review", "Custom Investigation"]
-        )
-        
-        if investigation_type == "Custom Investigation":
-            custom_query = st.text_area(
-                "Describe what you want to investigate",
-                placeholder="E.g., Find all S3 buckets without encryption in production accounts...",
-                height=100
-            )
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            target_env = st.selectbox("Target Environment", ["All", "production", "staging", "development", "sandbox"])
-        with col2:
-            include_remediation = st.checkbox("Include Remediation Scripts", value=True)
-        
-        if st.button("🚀 Start Investigation", type="primary"):
-            investigation_prompts = {
-                "S3 Security Assessment": "Investigate all S3-related security findings. Check for public access, missing encryption, and logging issues. Provide a summary and remediation plan.",
-                "IAM Risk Analysis": "Analyze IAM-related findings including overprivileged users, missing MFA, and old access keys. Prioritize by risk and suggest remediation.",
-                "Network Exposure Check": "Check for security groups with open access (0.0.0.0/0), exposed ports, and network misconfigurations. Provide risk assessment.",
-                "Encryption Compliance": "Review encryption status across all resources including EBS, RDS, and S3. Identify unencrypted resources and generate remediation scripts.",
-                "Account Security Review": f"Perform a comprehensive security review of {'all accounts' if target_env == 'All' else target_env + ' accounts'}. Include compliance scores, top findings, and recommendations.",
-            }
-            
-            if investigation_type == "Custom Investigation":
-                query = custom_query
-            else:
-                query = investigation_prompts.get(investigation_type, "")
-            
-            if include_remediation:
-                query += " Generate remediation scripts for the most critical issues."
-            
-            if target_env != "All":
-                query += f" Focus on {target_env} environment."
-            
-            with st.spinner(f"🔍 Running {investigation_type}..."):
-                response, tool_history = run_agentic_loop(query)
-                
-                st.markdown("### Investigation Results")
-                st.markdown(response)
-                
-                if tool_history:
-                    with st.expander(f"🔧 Tools Used ({len(tool_history)})"):
-                        for tool in tool_history:
-                            st.markdown(f"**{tool['tool']}**")
-                            st.code(json.dumps(tool['input'], indent=2), language="json")
-    
-    with tab3:
-        st.subheader("Tool Execution History")
-        
-        if st.session_state.get("agent_tool_history"):
-            for i, tool in enumerate(reversed(st.session_state.agent_tool_history[-20:])):
-                with st.expander(f"🔧 {tool['tool']} (#{len(st.session_state.agent_tool_history) - i})"):
-                    st.markdown("**Input:**")
-                    st.json(tool['input'])
-                    st.markdown("**Output (truncated):**")
-                    st.code(tool['output'], language="json")
-        else:
-            st.info("No tool executions yet. Start a conversation with the agent to see tool history.")
-    
-    with tab4:
-        st.subheader("Available Agent Tools")
-        st.markdown("The AI Security Agent has access to the following tools:")
-        
-        for tool in AGENT_TOOLS:
-            with st.expander(f"🔧 {tool['name']}"):
-                st.markdown(f"**Description:** {tool['description']}")
-                st.markdown("**Parameters:**")
-                props = tool['input_schema'].get('properties', {})
-                for prop_name, prop_def in props.items():
-                    required = "Required" if prop_name in tool['input_schema'].get('required', []) else "Optional"
-                    st.markdown(f"- `{prop_name}` ({required}): {prop_def.get('description', 'No description')}")
-
-# ==================== ACCOUNTS PAGE ====================
 # ==================== OPERATIONAL CONTROLS PAGE ====================
 elif page == "⚙️ Operational Controls":
     st.markdown('<div class="main-header">⚙️ Operational Controls</div>', unsafe_allow_html=True)
