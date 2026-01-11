@@ -2378,61 +2378,48 @@ with st.sidebar:
     
     st.markdown("---")
     
+    # Category to pages mapping
+    category_pages = {
+        "📊 Overview": ["🏠 Dashboard"],
+        "🛡️ Operations": ["🔨 Build & Run", "🔄 Evolve & Improve", "🐳 Container Security"],
+        "🚀 AI Command Center": ["🚀 Transform"],
+        "🏢 Accounts & Governance": ["🏢 Accounts", "🏢 Multi-Account Manager", "📦 Account Lifecycle", "🔄 Sync"],
+        "🔍 Security & Compliance": ["📜 Policy as Code", "📜 Policies", "🔍 Findings", "🔧 Remediation", "⚠️ Exceptions"],
+        "💰 FinOps & Analytics": ["💰 FinOps Center", "📊 Analytics", "📝 Audit Logs"],
+        "⚙️ Administration": ["⚙️ Operational Controls", "🛠️ Settings"]
+    }
+    
+    categories = list(category_pages.keys())
+    
     # Consolidated Navigation with Categories
     st.markdown("##### 🎯 Navigation")
     
-    # Category selection
+    # Category selection - Streamlit handles state via key
     nav_category = st.selectbox(
         "Category",
-        ["📊 Overview", "🛡️ Operations", "🚀 AI Command Center", "🏢 Accounts & Governance", 
-         "🔍 Security & Compliance", "💰 FinOps & Analytics", "⚙️ Administration"],
+        categories,
+        key="nav_category_persistent",
         label_visibility="collapsed"
     )
     
+    # Get pages for current category
+    current_pages = category_pages[nav_category]
+    
     # Sub-navigation based on category
-    if nav_category == "📊 Overview":
-        page = st.radio("Page", ["🏠 Dashboard"], label_visibility="collapsed")
-    
-    elif nav_category == "🛡️ Operations":
-        page = st.radio("Page", [
-            "🔨 Build & Run",
-            "🔄 Evolve & Improve", 
-            "🐳 Container Security"
-        ], label_visibility="collapsed")
-    
-    elif nav_category == "🚀 AI Command Center":
+    if nav_category == "🚀 AI Command Center":
         page = "🚀 Transform"
         st.info("🤖 6 AI Agents Ready")
-    
-    elif nav_category == "🏢 Accounts & Governance":
-        page = st.radio("Page", [
-            "🏢 Accounts",
-            "🏢 Multi-Account Manager",
-            "📦 Account Lifecycle",
-            "🔄 Sync"
-        ], label_visibility="collapsed")
-    
-    elif nav_category == "🔍 Security & Compliance":
-        page = st.radio("Page", [
-            "📜 Policy as Code",
-            "📜 Policies",
-            "🔍 Findings",
-            "🔧 Remediation",
-            "⚠️ Exceptions"
-        ], label_visibility="collapsed")
-    
-    elif nav_category == "💰 FinOps & Analytics":
-        page = st.radio("Page", [
-            "💰 FinOps Center",
-            "📊 Analytics",
-            "📝 Audit Logs"
-        ], label_visibility="collapsed")
-    
-    elif nav_category == "⚙️ Administration":
-        page = st.radio("Page", [
-            "⚙️ Operational Controls",
-            "🛠️ Settings"
-        ], label_visibility="collapsed")
+    elif len(current_pages) == 1:
+        page = current_pages[0]
+    else:
+        # Use category-specific key for radio to avoid state conflicts
+        radio_key = f"nav_page_{nav_category.replace(' ', '_').replace('&', 'and')}"
+        page = st.radio(
+            "Page", 
+            current_pages,
+            key=radio_key,
+            label_visibility="collapsed"
+        )
     
     st.markdown("---")
     
