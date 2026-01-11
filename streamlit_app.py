@@ -2590,6 +2590,91 @@ if page == "🏠 Dashboard":
             </div>
         """, unsafe_allow_html=True)
     
+    # ==================== PHASE EXPLANATIONS ====================
+    st.markdown("---")
+    st.markdown("### 📖 Understanding Your Metrics")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 1rem; border-radius: 0 8px 8px 0; height: 100%;">
+            <h4 style="color: #dc2626; margin-top: 0;">🔨 Build & Run</h4>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Operational Health Score</strong></p>
+            <p style="color: #374151; font-size: 0.85rem; margin: 0;">
+            Measures your <strong>day-to-day security posture</strong>. This weighted score reflects:
+            </p>
+            <ul style="color: #374151; font-size: 0.8rem; margin: 0.5rem 0; padding-left: 1.2rem;">
+                <li>Compliance score (30%)</li>
+                <li>Finding severity impact (25%)</li>
+                <li>SLA compliance (20%)</li>
+                <li>Remediation success (10%)</li>
+                <li>Policy coverage (10%)</li>
+                <li>Account coverage (5%)</li>
+            </ul>
+            <p style="color: #6b7280; font-size: 0.75rem; margin: 0; font-style: italic;">
+            Higher = Better operational health
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 1rem; border-radius: 0 8px 8px 0; height: 100%;">
+            <h4 style="color: #2563eb; margin-top: 0;">🔄 Evolve & Improve</h4>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>Maturity Level</strong></p>
+            <p style="color: #374151; font-size: 0.85rem; margin: 0;">
+            Indicates your <strong>governance maturity</strong> across the platform. Average of:
+            </p>
+            <ul style="color: #374151; font-size: 0.8rem; margin: 0.5rem 0; padding-left: 1.2rem;">
+                <li>Policy deployment coverage</li>
+                <li>Remediation rate</li>
+                <li>Account onboarding progress</li>
+            </ul>
+            <p style="color: #6b7280; font-size: 0.75rem; margin: 0; font-style: italic;">
+            Higher = More mature governance processes
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style="background: #f5f3ff; border-left: 4px solid #7c3aed; padding: 1rem; border-radius: 0 8px 8px 0; height: 100%;">
+            <h4 style="color: #7c3aed; margin-top: 0;">🚀 Transform</h4>
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;"><strong>AI Transformation Progress</strong></p>
+            <p style="color: #374151; font-size: 0.85rem; margin: 0;">
+            Tracks your <strong>AI-powered capabilities</strong> adoption:
+            </p>
+            <ul style="color: #374151; font-size: 0.8rem; margin: 0.5rem 0; padding-left: 1.2rem;">
+                <li>AI agent deployment</li>
+                <li>Predictive analytics integration</li>
+                <li>FinOps AI optimization</li>
+                <li>Automated decision-making</li>
+            </ul>
+            <p style="color: #6b7280; font-size: 0.75rem; margin: 0; font-style: italic;">
+            Higher = More AI capabilities active
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Maturity Journey Indicator
+    st.markdown("---")
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, #fef2f2 0%, #eff6ff 50%, #f5f3ff 100%); padding: 1rem; border-radius: 12px; text-align: center;">
+        <p style="color: #64748b; font-size: 0.8rem; margin-bottom: 0.5rem;">YOUR CLOUD SECURITY MATURITY JOURNEY</p>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="background: #dc2626; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🔨 Build & Run: {health['overall_health']:.0f}%</span>
+            <span style="color: #9ca3af; font-size: 1.2rem;">→</span>
+            <span style="background: #2563eb; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🔄 Evolve: {evolve_maturity:.0f}%</span>
+            <span style="color: #9ca3af; font-size: 1.2rem;">→</span>
+            <span style="background: #7c3aed; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🚀 Transform: {transform_progress:.0f}%</span>
+        </div>
+        <p style="color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem; margin-bottom: 0;">
+            Start with operational excellence → Build governance maturity → Enable AI-powered transformation
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # ==================== DATA SOURCES EXPANDER ====================
     with st.expander("📋 **Data Sources & Calculation Details**", expanded=False):
         st.markdown("### How These Metrics Are Calculated")
