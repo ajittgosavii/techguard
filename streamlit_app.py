@@ -5252,24 +5252,272 @@ elif page == "📊 Analytics":
 
 # ==================== SYNC PAGE ====================
 elif page == "🔄 Sync":
-    st.header("Data Synchronization")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### AWS Organizations")
-        if st.button("Sync Accounts", disabled=not aws_connected):
-            st.info("Syncing accounts from AWS Organizations...")
-            st.success("Sync completed!")
-    
-    with col2:
-        st.markdown("### Security Hub")
-        if st.button("Sync Findings", disabled=not aws_connected):
-            st.info("Syncing findings from Security Hub...")
-            st.success("Sync completed!")
+    st.header("🔄 Data Synchronization")
+    st.markdown("Sync real data from your AWS account into TechGuardrails.")
     
     if not aws_connected:
-        st.warning("⚠️ AWS not connected. Configure credentials in Settings.")
+        st.error("⚠️ AWS not connected. Configure credentials in Settings → Connections tab.")
+        st.info("""
+        **To connect AWS:**
+        1. Go to Streamlit Cloud → Manage app → Settings → Secrets
+        2. Add your AWS credentials:
+        ```toml
+        [aws]
+        access_key_id = "YOUR_ACCESS_KEY"
+        secret_access_key = "YOUR_SECRET_KEY"
+        region = "us-east-1"
+        ```
+        """)
+    else:
+        st.success("✅ AWS Connected - Ready to sync")
+        
+        # Current database stats
+        st.markdown("### 📊 Current Database")
+        with get_db_session() as db:
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Accounts", db.query(Account).count())
+            col2.metric("Findings", db.query(Finding).count())
+            col3.metric("Policies", db.query(Policy).count())
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 🏢 AWS Organizations")
+            st.markdown("Sync accounts from AWS Organizations")
+            
+            if st.button("🔄 Sync Accounts from AWS", type="primary", key="sync_accounts"):
+                with st.spinner("Fetching accounts from AWS Organizations..."):
+                    try:
+                        # Create Organizations client
+                        org_client = boto3.client(
+                            'organizations',
+                            aws_access_key_id=CONFIG['aws'].get('access_key_id'),
+                            aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
+                            region_name=CONFIG['aws'].get('region', 'us-east-1')
+                        )
+                        
+                        # List all accounts
+                        accounts = []
+                        paginator = org_client.get_paginator('list_accounts')
+                        for page in paginator.paginate():
+                            accounts.extend(page['Accounts'])
+                        
+                        # Store in database
+                        with get_db_session() as db:
+                            # Clear existing accounts first
+                            db.query(Account).delete()
+                            
+                            synced_count = 0
+                            for acc in accounts:
+                                account = Account(
+                                    account_id=acc['Id'],
+                                    name=acc.get('Name', f"Account-{acc['Id']}"),
+                                    email=acc.get('Email', ''),
+                                    status=AccountStatus.ACTIVE if acc.get('Status') == 'ACTIVE' else AccountStatus.SUSPENDED,
+                                    environment='production',  # Default, can be updated
+                                    business_unit='Unknown',
+                                    compliance_score=0.0,  # Will be calculated from findings
+                                    guardrails_enabled=True
+                                )
+                                db.add(account)
+                                synced_count += 1
+                            
+                            db.commit()
+                        
+                        st.success(f"✅ Synced {synced_count} accounts from AWS Organizations!")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                        
+                    except ClientError as e:
+                        if 'AccessDenied' in str(e):
+                            st.error("❌ Access Denied. Your IAM role needs `organizations:ListAccounts` permission.")
+                        elif 'AWSOrganizationsNotInUse' in str(e):
+                            st.warning("⚠️ AWS Organizations is not enabled for this account.")
+                            st.info("This might be a standalone account. Adding it as a single account...")
+                            
+                            # Try to get current account info
+                            try:
+                                sts_client = boto3.client(
+                                    'sts',
+                                    aws_access_key_id=CONFIG['aws'].get('access_key_id'),
+                                    aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
+                                    region_name=CONFIG['aws'].get('region', 'us-east-1')
+                                )
+                                identity = sts_client.get_caller_identity()
+                                account_id = identity['Account']
+                                
+                                with get_db_session() as db:
+                                    db.query(Account).delete()
+                                    account = Account(
+                                        account_id=account_id,
+                                        name=f"AWS Account {account_id}",
+                                        email='',
+                                        status=AccountStatus.ACTIVE,
+                                        environment='production',
+                                        business_unit='Primary',
+                                        compliance_score=0.0,
+                                        guardrails_enabled=True
+                                    )
+                                    db.add(account)
+                                    db.commit()
+                                
+                                st.success(f"✅ Added standalone account: {account_id}")
+                                st.cache_data.clear()
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e2:
+                                st.error(f"❌ Error: {e2}")
+                        else:
+                            st.error(f"❌ AWS Error: {e}")
+                    except Exception as e:
+                        st.error(f"❌ Error syncing accounts: {e}")
+        
+        with col2:
+            st.markdown("### 🛡️ Security Hub")
+            st.markdown("Sync findings from AWS Security Hub")
+            
+            if st.button("🔄 Sync Findings from Security Hub", type="primary", key="sync_findings"):
+                with st.spinner("Fetching findings from Security Hub..."):
+                    try:
+                        # Create Security Hub client
+                        sh_client = boto3.client(
+                            'securityhub',
+                            aws_access_key_id=CONFIG['aws'].get('access_key_id'),
+                            aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
+                            region_name=CONFIG['aws'].get('region', 'us-east-1')
+                        )
+                        
+                        # Get findings (active ones)
+                        findings_response = sh_client.get_findings(
+                            Filters={
+                                'RecordState': [{'Value': 'ACTIVE', 'Comparison': 'EQUALS'}],
+                                'WorkflowStatus': [
+                                    {'Value': 'NEW', 'Comparison': 'EQUALS'},
+                                    {'Value': 'NOTIFIED', 'Comparison': 'EQUALS'}
+                                ]
+                            },
+                            MaxResults=100
+                        )
+                        
+                        findings = findings_response.get('Findings', [])
+                        
+                        # Map severity
+                        def map_severity(sev_label):
+                            mapping = {
+                                'CRITICAL': FindingSeverity.CRITICAL,
+                                'HIGH': FindingSeverity.HIGH,
+                                'MEDIUM': FindingSeverity.MEDIUM,
+                                'LOW': FindingSeverity.LOW,
+                                'INFORMATIONAL': FindingSeverity.LOW
+                            }
+                            return mapping.get(sev_label, FindingSeverity.MEDIUM)
+                        
+                        with get_db_session() as db:
+                            # Clear existing findings
+                            db.query(Finding).delete()
+                            
+                            synced_count = 0
+                            for f in findings:
+                                # Extract resource info
+                                resources = f.get('Resources', [{}])
+                                resource = resources[0] if resources else {}
+                                
+                                finding = Finding(
+                                    finding_id=f.get('Id', str(uuid.uuid4())),
+                                    source='SecurityHub',
+                                    aws_account_id=f.get('AwsAccountId', ''),
+                                    region=f.get('Region', CONFIG['aws'].get('region', 'us-east-1')),
+                                    resource_type=resource.get('Type', 'Unknown'),
+                                    resource_id=resource.get('Id', ''),
+                                    title=f.get('Title', 'Unknown Finding'),
+                                    description=f.get('Description', ''),
+                                    severity=map_severity(f.get('Severity', {}).get('Label', 'MEDIUM')),
+                                    status=FindingStatus.NEW,
+                                    compliance_frameworks=list(f.get('Compliance', {}).get('AssociatedStandards', [])) or ['SecurityHub'],
+                                    first_observed_at=datetime.fromisoformat(f['FirstObservedAt'].replace('Z', '+00:00')) if f.get('FirstObservedAt') else utcnow(),
+                                    last_observed_at=datetime.fromisoformat(f['LastObservedAt'].replace('Z', '+00:00')) if f.get('LastObservedAt') else utcnow()
+                                )
+                                db.add(finding)
+                                synced_count += 1
+                            
+                            # Calculate and store compliance score
+                            critical = db.query(Finding).filter(Finding.severity == FindingSeverity.CRITICAL).count()
+                            high = db.query(Finding).filter(Finding.severity == FindingSeverity.HIGH).count()
+                            medium = db.query(Finding).filter(Finding.severity == FindingSeverity.MEDIUM).count()
+                            low = db.query(Finding).filter(Finding.severity == FindingSeverity.LOW).count()
+                            
+                            calc_score = max(0, 100 - (critical * 5) - (high * 2) - (medium * 0.5) - (low * 0.1))
+                            
+                            compliance_score = ComplianceScore(
+                                overall_score=calc_score,
+                                critical_findings=critical,
+                                high_findings=high,
+                                medium_findings=medium,
+                                low_findings=low,
+                                calculated_at=utcnow()
+                            )
+                            db.add(compliance_score)
+                            db.commit()
+                        
+                        st.success(f"✅ Synced {synced_count} findings from Security Hub!")
+                        st.info(f"Calculated Compliance Score: {calc_score:.1f}%")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                        
+                    except ClientError as e:
+                        if 'AccessDenied' in str(e):
+                            st.error("❌ Access Denied. Your IAM role needs `securityhub:GetFindings` permission.")
+                        elif 'InvalidAccessException' in str(e):
+                            st.warning("⚠️ Security Hub is not enabled in this region.")
+                            st.info("Enable Security Hub in AWS Console first, or try a different region.")
+                        else:
+                            st.error(f"❌ AWS Error: {e}")
+                    except Exception as e:
+                        st.error(f"❌ Error syncing findings: {e}")
+        
+        st.markdown("---")
+        
+        # Full sync option
+        st.markdown("### 🔄 Full Sync")
+        if st.button("🔄 Sync Everything (Accounts + Findings)", type="secondary"):
+            st.info("Click the individual sync buttons above for Accounts and Findings.")
+        
+        # Show what permissions are needed
+        with st.expander("📋 Required IAM Permissions"):
+            st.code("""
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "organizations:ListAccounts",
+                "organizations:DescribeOrganization"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "securityhub:GetFindings",
+                "securityhub:DescribeHub"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sts:GetCallerIdentity"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+            """, language="json")
 
 # ==================== SETTINGS PAGE ====================
 elif page == "🛠️ Settings":
