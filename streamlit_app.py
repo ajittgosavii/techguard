@@ -3971,96 +3971,280 @@ elif page == "📜 Policy as Code":
             lib_tabs = st.tabs(["📋 Policy Library", "🔍 Compliance Scan", "🎯 AI Triage", "🚀 Deploy & Enforce", "📊 Monitor & Report"])
             
             with lib_tabs[0]:
-                st.markdown("### Policy Catalog")
+                st.markdown("""
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                    <strong>Step 1:</strong> Browse and select policies to deploy. Use AI to generate custom policies.
+                </div>
+                """, unsafe_allow_html=True)
                 
-                # Filter controls
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    policy_type_filter = st.selectbox("Policy Type", ["All", "SCP", "OPA/Rego", "AWS Config", "KICS", "CloudFormation Guard", "FinOps"])
-                with col2:
-                    compliance_filter = st.selectbox("Compliance Framework", ["All", "PCI-DSS", "HIPAA", "SOC 2", "ISO 27001", "GDPR", "CIS", "FinOps"])
-                with col3:
-                    status_filter = st.selectbox("Status", ["All", "Deployed", "Testing", "Draft", "Deprecated"])
+                # Sub-tabs for Library
+                library_subtabs = st.tabs(["🔍 Browse Library", "🤖 AI Policy Generator", "📋 Selected Policies"])
                 
-                # Combined policy library with FinOps policies
-                all_policies = [
-                    # Security SCPs
-                    {"id": "SCP-001", "name": "Deny Root Account Usage", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "CIS, SOC 2", "violations": 0},
-                    {"id": "SCP-002", "name": "Require IMDSv2", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 95, "compliance": "CIS", "violations": 5},
-                    {"id": "SCP-003", "name": "Block Public S3 Buckets", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS, HIPAA", "violations": 0},
-                    {"id": "SCP-004", "name": "Enforce S3 Encryption", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS, HIPAA", "violations": 2},
-                    {"id": "SCP-005", "name": "Deny Region Outside Allowed List", "type": "SCP", "category": "Compliance", "status": "Deployed", "accounts": 85, "compliance": "GDPR", "violations": 0},
+                with library_subtabs[0]:
+                    # Filter controls
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        policy_type_filter = st.selectbox("Policy Type", ["All Types", "SCP", "OPA/Rego", "AWS Config", "KICS", "CloudFormation Guard"], key="pt_filter")
+                    with col2:
+                        compliance_filter = st.selectbox("Framework", ["All Frameworks", "PCI-DSS", "HIPAA", "SOC2", "ISO27001", "GDPR", "CIS", "NIST", "FinOps"], key="cf_filter")
+                    with col3:
+                        severity_filter = st.selectbox("Severity", ["All Severities", "Critical", "High", "Medium", "Low"], key="sev_filter")
+                    with col4:
+                        search_query = st.text_input("🔍 Search", placeholder="Search policies...", key="search_pol")
                     
-                    # OPA Policies
-                    {"id": "OPA-001", "name": "Kubernetes Pod Security", "type": "OPA/Rego", "category": "Security", "status": "Deployed", "accounts": 45, "compliance": "CIS", "violations": 12},
-                    {"id": "OPA-002", "name": "Container Image Policy", "type": "OPA/Rego", "category": "Security", "status": "Testing", "accounts": 0, "compliance": "SOC 2", "violations": 0},
-                    {"id": "OPA-003", "name": "Network Policy Enforcement", "type": "OPA/Rego", "category": "Security", "status": "Deployed", "accounts": 32, "compliance": "CIS", "violations": 8},
+                    st.markdown("---")
                     
-                    # Config Rules
-                    {"id": "CFG-001", "name": "EC2 Instance Types Allowed", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 78, "compliance": "FinOps", "violations": 23},
-                    {"id": "CFG-002", "name": "EBS Encryption Required", "type": "AWS Config", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS", "violations": 0},
-                    {"id": "CFG-003", "name": "RDS Multi-AZ Required", "type": "AWS Config", "category": "Reliability", "status": "Deployed", "accounts": 65, "compliance": "SOC 2", "violations": 4},
+                    # Initialize selected policies in session state
+                    if 'selected_policies' not in st.session_state:
+                        st.session_state.selected_policies = []
                     
-                    # KICS Policies
-                    {"id": "KICS-001", "name": "Terraform Security Rules", "type": "KICS", "category": "Security", "status": "Testing", "accounts": 0, "compliance": "Best Practice", "violations": 0},
-                    {"id": "KICS-002", "name": "CloudFormation Security", "type": "KICS", "category": "Security", "status": "Deployed", "accounts": 55, "compliance": "CIS", "violations": 15},
+                    # Comprehensive policy library
+                    all_policies = [
+                        # Critical Security Policies
+                        {"id": "POL-001", "name": "Deny Public S3 Buckets", "severity": "Critical", "type": "SCP", 
+                         "description": "Prevents creation of publicly accessible S3 buckets...",
+                         "frameworks": ["PCI-DSS", "HIPAA", "SOC2"], "category": "Security"},
+                        {"id": "POL-002", "name": "Require Encryption at Rest", "severity": "Critical", "type": "SCP",
+                         "description": "Enforces encryption for S3, EBS, RDS, and other storage...",
+                         "frameworks": ["PCI-DSS", "HIPAA", "SOC2"], "category": "Security"},
+                        {"id": "POL-003", "name": "Deny Root Account Usage", "severity": "Critical", "type": "SCP",
+                         "description": "Prevents usage of AWS root account credentials...",
+                         "frameworks": ["PCI-DSS", "SOC2", "NIST"], "category": "Security"},
+                        {"id": "POL-004", "name": "Block Unencrypted Data Transfer", "severity": "Critical", "type": "SCP",
+                         "description": "Blocks unencrypted data transfers and requires TLS...",
+                         "frameworks": ["PCI-DSS", "HIPAA"], "category": "Security"},
+                        
+                        # High Severity Policies
+                        {"id": "POL-005", "name": "Restrict AWS Regions", "severity": "High", "type": "SCP",
+                         "description": "Limits AWS operations to approved regions only...",
+                         "frameworks": ["GDPR", "SOC2", "ISO27001"], "category": "Compliance"},
+                        {"id": "POL-006", "name": "Require MFA for Privileged Actions", "severity": "High", "type": "SCP",
+                         "description": "Requires MFA for destructive and privilege escalation actions...",
+                         "frameworks": ["PCI-DSS", "SOC2", "ISO27001"], "category": "Security"},
+                        {"id": "POL-007", "name": "Enforce IMDSv2", "severity": "High", "type": "SCP",
+                         "description": "Requires Instance Metadata Service Version 2 for EC2...",
+                         "frameworks": ["CIS", "SOC2"], "category": "Security"},
+                        {"id": "POL-008", "name": "Block Public RDS Instances", "severity": "High", "type": "AWS Config",
+                         "description": "Prevents RDS instances from being publicly accessible...",
+                         "frameworks": ["PCI-DSS", "HIPAA", "SOC2"], "category": "Security"},
+                        
+                        # Medium Severity / FinOps Policies
+                        {"id": "POL-009", "name": "Deny Expensive Instance Types", "severity": "Medium", "type": "SCP",
+                         "description": "Blocks launch of expensive EC2 instance types...",
+                         "frameworks": ["SOC2", "FinOps"], "category": "FinOps"},
+                        {"id": "POL-010", "name": "Require Cost Allocation Tags", "severity": "Medium", "type": "SCP",
+                         "description": "Enforces mandatory cost allocation tags on all resources...",
+                         "frameworks": ["FinOps"], "category": "FinOps"},
+                        {"id": "POL-011", "name": "Detect Idle Resources", "severity": "Medium", "type": "AWS Config",
+                         "description": "Identifies and alerts on underutilized EC2, RDS, and EBS...",
+                         "frameworks": ["FinOps"], "category": "FinOps"},
+                        {"id": "POL-012", "name": "Enforce Tagging Standards", "severity": "Medium", "type": "AWS Config",
+                         "description": "Validates resources have required tags (Environment, Owner, Project)...",
+                         "frameworks": ["SOC2", "FinOps"], "category": "FinOps"},
+                        
+                        # Kubernetes/Container Policies
+                        {"id": "POL-013", "name": "Pod Security Standards", "severity": "High", "type": "OPA/Rego",
+                         "description": "Enforces Kubernetes pod security standards (restricted profile)...",
+                         "frameworks": ["CIS", "SOC2"], "category": "Kubernetes"},
+                        {"id": "POL-014", "name": "Container Image Policy", "severity": "High", "type": "OPA/Rego",
+                         "description": "Validates container images come from approved registries...",
+                         "frameworks": ["SOC2", "NIST"], "category": "Kubernetes"},
+                        {"id": "POL-015", "name": "Network Policy Required", "severity": "Medium", "type": "OPA/Rego",
+                         "description": "Requires NetworkPolicy for all namespaces...",
+                         "frameworks": ["CIS"], "category": "Kubernetes"},
+                        
+                        # IaC Security Policies
+                        {"id": "POL-016", "name": "Terraform Security Rules", "severity": "High", "type": "KICS",
+                         "description": "Scans Terraform code for security misconfigurations...",
+                         "frameworks": ["CIS", "SOC2"], "category": "IaC"},
+                        {"id": "POL-017", "name": "CloudFormation Security", "severity": "High", "type": "KICS",
+                         "description": "Validates CloudFormation templates against security best practices...",
+                         "frameworks": ["CIS", "NIST"], "category": "IaC"},
+                    ]
                     
-                    # FinOps Policies
-                    {"id": "FIN-001", "name": "Require Cost Allocation Tags", "type": "SCP", "category": "FinOps", "status": "Deployed", "accounts": 100, "compliance": "FinOps", "violations": 45},
-                    {"id": "FIN-002", "name": "Block Expensive Instance Types", "type": "SCP", "category": "FinOps", "status": "Deployed", "accounts": 90, "compliance": "FinOps", "violations": 3},
-                    {"id": "FIN-003", "name": "Reserved Instance Coverage", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 50, "compliance": "FinOps", "violations": 28},
-                    {"id": "FIN-004", "name": "Savings Plan Utilization", "type": "AWS Config", "category": "FinOps", "status": "Testing", "accounts": 0, "compliance": "FinOps", "violations": 0},
-                    {"id": "FIN-005", "name": "Idle Resource Detection", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 100, "compliance": "FinOps", "violations": 67},
-                ]
+                    # Apply filters
+                    filtered_policies = all_policies
+                    if policy_type_filter != "All Types":
+                        filtered_policies = [p for p in filtered_policies if p['type'] == policy_type_filter]
+                    if compliance_filter != "All Frameworks":
+                        filtered_policies = [p for p in filtered_policies if compliance_filter in p['frameworks']]
+                    if severity_filter != "All Severities":
+                        filtered_policies = [p for p in filtered_policies if p['severity'] == severity_filter]
+                    if search_query:
+                        filtered_policies = [p for p in filtered_policies if search_query.lower() in p['name'].lower() or search_query.lower() in p['description'].lower()]
+                    
+                    st.markdown(f"**Showing {len(filtered_policies)} policies**")
+                    
+                    # Display policies as cards (3 per row)
+                    for i in range(0, len(filtered_policies), 3):
+                        cols = st.columns(3)
+                        for j, col in enumerate(cols):
+                            if i + j < len(filtered_policies):
+                                policy = filtered_policies[i + j]
+                                
+                                # Severity badge colors
+                                sev_colors = {
+                                    "Critical": ("#dc2626", "#fef2f2"),
+                                    "High": ("#f97316", "#fff7ed"),
+                                    "Medium": ("#f59e0b", "#fffbeb"),
+                                    "Low": ("#22c55e", "#f0fdf4")
+                                }
+                                sev_color, sev_bg = sev_colors.get(policy['severity'], ("#6b7280", "#f9fafb"))
+                                
+                                # Framework badges
+                                framework_badges = " ".join([f'<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px;">{fw}</span>' for fw in policy['frameworks'][:3]])
+                                
+                                with col:
+                                    st.markdown(f"""
+                                    <div style="border: 1px solid #e2e8f0; border-left: 4px solid {sev_color}; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: white;">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                            <span style="font-weight: 600; color: #1e293b;">🔵 {policy['name']}</span>
+                                            <span style="background: {sev_bg}; color: {sev_color}; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">{policy['severity'].upper()}</span>
+                                        </div>
+                                        <p style="color: #64748b; font-size: 0.85rem; margin: 0.5rem 0;">{policy['description']}</p>
+                                        <div style="margin-top: 0.5rem;">{framework_badges}</div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    
+                                    # Action buttons
+                                    btn_col1, btn_col2 = st.columns(2)
+                                    with btn_col1:
+                                        if st.button("👁️ View", key=f"view_{policy['id']}", use_container_width=True):
+                                            st.session_state[f"view_policy_{policy['id']}"] = True
+                                    with btn_col2:
+                                        is_selected = policy['id'] in st.session_state.selected_policies
+                                        btn_label = "✅ Selected" if is_selected else "➕ Select"
+                                        if st.button(btn_label, key=f"select_{policy['id']}", use_container_width=True):
+                                            if is_selected:
+                                                st.session_state.selected_policies.remove(policy['id'])
+                                            else:
+                                                st.session_state.selected_policies.append(policy['id'])
+                                            st.rerun()
+                                    
+                                    # Show policy details if View was clicked
+                                    if st.session_state.get(f"view_policy_{policy['id']}", False):
+                                        with st.expander(f"📋 {policy['name']} Details", expanded=True):
+                                            st.markdown(f"**Type:** {policy['type']}")
+                                            st.markdown(f"**Category:** {policy['category']}")
+                                            st.markdown(f"**Severity:** {policy['severity']}")
+                                            st.markdown(f"**Frameworks:** {', '.join(policy['frameworks'])}")
+                                            st.markdown(f"**Description:** {policy['description']}")
+                                            
+                                            # Show sample policy code
+                                            if policy['type'] == 'SCP':
+                                                st.code('''{
+    "Version": "2012-10-17",
+    "Statement": [{
+        "Sid": "''' + policy['id'] + '''",
+        "Effect": "Deny",
+        "Action": ["..."],
+        "Resource": "*"
+    }]
+}''', language="json")
+                                            
+                                            if st.button("Close", key=f"close_{policy['id']}"):
+                                                st.session_state[f"view_policy_{policy['id']}"] = False
+                                                st.rerun()
                 
-                # Apply filters
-                filtered_policies = all_policies
-                if policy_type_filter != "All":
-                    filtered_policies = [p for p in filtered_policies if p['type'] == policy_type_filter]
-                if compliance_filter != "All":
-                    filtered_policies = [p for p in filtered_policies if compliance_filter in p['compliance']]
-                if status_filter != "All":
-                    filtered_policies = [p for p in filtered_policies if p['status'] == status_filter]
+                # AI Policy Generator Tab
+                with library_subtabs[1]:
+                    st.markdown("### 🤖 AI Policy Generator")
+                    st.markdown("*Use Claude AI to generate custom policies based on your requirements*")
+                    
+                    col1, col2 = st.columns([2, 1])
+                    
+                    with col1:
+                        policy_requirement = st.text_area(
+                            "Describe your policy requirement",
+                            placeholder="E.g., 'Create a policy that blocks EC2 instances larger than m5.xlarge in development accounts' or 'Enforce that all Lambda functions must have VPC configuration'",
+                            height=150
+                        )
+                        
+                        gen_col1, gen_col2, gen_col3 = st.columns(3)
+                        with gen_col1:
+                            gen_type = st.selectbox("Output Type", ["SCP", "AWS Config Rule", "OPA/Rego", "KICS"])
+                        with gen_col2:
+                            gen_severity = st.selectbox("Severity Level", ["Critical", "High", "Medium", "Low"])
+                        with gen_col3:
+                            gen_frameworks = st.multiselect("Compliance Frameworks", ["PCI-DSS", "HIPAA", "SOC2", "CIS", "FinOps"])
+                        
+                        if st.button("🚀 Generate Policy", type="primary"):
+                            if policy_requirement:
+                                with st.spinner("Generating policy with Claude AI..."):
+                                    prompt = f"""Generate an AWS {gen_type} policy based on this requirement:
+
+Requirement: {policy_requirement}
+Severity: {gen_severity}
+Compliance Frameworks: {', '.join(gen_frameworks) if gen_frameworks else 'Best Practice'}
+
+Provide:
+1. Policy name
+2. Description
+3. The actual policy code
+4. Implementation notes"""
+                                    
+                                    response = invoke_claude(prompt, max_tokens=2000)
+                                    st.markdown("#### Generated Policy")
+                                    st.markdown(response)
+                            else:
+                                st.warning("Please describe your policy requirement")
+                    
+                    with col2:
+                        st.markdown("#### Quick Templates")
+                        
+                        templates = [
+                            "Block public S3 buckets",
+                            "Require encryption at rest",
+                            "Enforce cost allocation tags",
+                            "Restrict to approved regions",
+                            "Block expensive instances",
+                            "Require MFA for deletions"
+                        ]
+                        
+                        for template in templates:
+                            if st.button(f"📝 {template}", key=f"template_{template}", use_container_width=True):
+                                st.session_state.policy_template = template
+                                st.rerun()
                 
-                # Summary metrics
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Total Policies", len(all_policies))
-                with col2:
-                    st.metric("Deployed", len([p for p in all_policies if p['status'] == 'Deployed']))
-                with col3:
-                    total_violations = sum(p['violations'] for p in all_policies)
-                    st.metric("Active Violations", total_violations)
-                with col4:
-                    finops_policies = len([p for p in all_policies if p['category'] == 'FinOps'])
-                    st.metric("FinOps Policies", finops_policies)
-                
-                st.markdown("---")
-                
-                # Display filtered policies
-                policies_df = pd.DataFrame(filtered_policies)
-                
-                # Add status colors
-                def style_status(val):
-                    colors = {"Deployed": "#10b981", "Testing": "#f59e0b", "Draft": "#6b7280", "Deprecated": "#ef4444"}
-                    return f'color: {colors.get(val, "#000")}'
-                
-                st.dataframe(policies_df, use_container_width=True, hide_index=True)
-                
-                # Quick actions
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    if st.button("➕ Create New Policy"):
-                        st.info("Use the Policy as Code mode to create new policies")
-                with col2:
-                    if st.button("📥 Import Policies"):
-                        st.info("Import from AWS Organizations, Git, or file")
-                with col3:
-                    if st.button("📤 Export All"):
-                        st.download_button("Download JSON", json.dumps(all_policies, indent=2), "policies.json", "application/json")
-                with col4:
-                    if st.button("🔄 Sync with AWS"):
-                        st.success("Policies synced with AWS Organizations")
+                # Selected Policies Tab
+                with library_subtabs[2]:
+                    st.markdown("### 📋 Selected Policies")
+                    
+                    if st.session_state.selected_policies:
+                        st.success(f"**{len(st.session_state.selected_policies)} policies selected for deployment**")
+                        
+                        selected = [p for p in all_policies if p['id'] in st.session_state.selected_policies]
+                        
+                        for policy in selected:
+                            sev_colors = {"Critical": "#dc2626", "High": "#f97316", "Medium": "#f59e0b", "Low": "#22c55e"}
+                            
+                            col1, col2, col3 = st.columns([3, 1, 1])
+                            with col1:
+                                st.markdown(f"**{policy['name']}** ({policy['type']})")
+                                st.caption(policy['description'])
+                            with col2:
+                                st.markdown(f"<span style='color: {sev_colors.get(policy['severity'], '#6b7280')}'>{policy['severity']}</span>", unsafe_allow_html=True)
+                            with col3:
+                                if st.button("❌ Remove", key=f"remove_{policy['id']}"):
+                                    st.session_state.selected_policies.remove(policy['id'])
+                                    st.rerun()
+                        
+                        st.markdown("---")
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if st.button("🚀 Deploy Selected", type="primary", use_container_width=True):
+                                st.success("Navigate to Deploy & Enforce tab to configure deployment")
+                        with col2:
+                            if st.button("📤 Export Selected", use_container_width=True):
+                                export_data = [p for p in all_policies if p['id'] in st.session_state.selected_policies]
+                                st.download_button("Download JSON", json.dumps(export_data, indent=2), "selected_policies.json", "application/json")
+                        with col3:
+                            if st.button("🗑️ Clear All", use_container_width=True):
+                                st.session_state.selected_policies = []
+                                st.rerun()
+                    else:
+                        st.info("No policies selected. Go to Browse Library to select policies.")
             
             # ========== COMPLIANCE SCAN TAB ==========
             with lib_tabs[1]:
