@@ -2378,36 +2378,61 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Navigation with all features - reorganized and consolidated
+    # Consolidated Navigation with Categories
     st.markdown("##### 🎯 Navigation")
-    page = st.radio(
-        "Navigate",
-        [
-            # === MAIN PHASES ===
-            "🏠 Dashboard", 
-            "🔨 Build & Run", 
-            "🔄 Evolve & Improve", 
-            "🚀 Transform",  # AI Command Center - all AI features consolidated here
-            # === SPECIALIZED MODULES ===
-            "💰 FinOps Center",
-            "🐳 Container Security",
-            "📦 Account Lifecycle",
-            "📜 Policy as Code",
-            "🏢 Multi-Account Manager",
-            # === OPERATIONS ===
-            "⚙️ Operational Controls", 
-            "🏢 Accounts", 
-            "🔍 Findings", 
-            "📜 Policies",
-            "🔧 Remediation", 
-            "⚠️ Exceptions", 
-            "📝 Audit Logs", 
-            "📊 Analytics", 
-            "🔄 Sync", 
-            "🛠️ Settings"
-        ],
+    
+    # Category selection
+    nav_category = st.selectbox(
+        "Category",
+        ["📊 Overview", "🛡️ Operations", "🚀 AI Command Center", "🏢 Accounts & Governance", 
+         "🔍 Security & Compliance", "💰 FinOps & Analytics", "⚙️ Administration"],
         label_visibility="collapsed"
     )
+    
+    # Sub-navigation based on category
+    if nav_category == "📊 Overview":
+        page = st.radio("Page", ["🏠 Dashboard"], label_visibility="collapsed")
+    
+    elif nav_category == "🛡️ Operations":
+        page = st.radio("Page", [
+            "🔨 Build & Run",
+            "🔄 Evolve & Improve", 
+            "🐳 Container Security"
+        ], label_visibility="collapsed")
+    
+    elif nav_category == "🚀 AI Command Center":
+        page = "🚀 Transform"
+        st.info("🤖 6 AI Agents Ready")
+    
+    elif nav_category == "🏢 Accounts & Governance":
+        page = st.radio("Page", [
+            "🏢 Accounts",
+            "🏢 Multi-Account Manager",
+            "📦 Account Lifecycle",
+            "🔄 Sync"
+        ], label_visibility="collapsed")
+    
+    elif nav_category == "🔍 Security & Compliance":
+        page = st.radio("Page", [
+            "📜 Policy as Code",
+            "📜 Policies",
+            "🔍 Findings",
+            "🔧 Remediation",
+            "⚠️ Exceptions"
+        ], label_visibility="collapsed")
+    
+    elif nav_category == "💰 FinOps & Analytics":
+        page = st.radio("Page", [
+            "💰 FinOps Center",
+            "📊 Analytics",
+            "📝 Audit Logs"
+        ], label_visibility="collapsed")
+    
+    elif nav_category == "⚙️ Administration":
+        page = st.radio("Page", [
+            "⚙️ Operational Controls",
+            "🛠️ Settings"
+        ], label_visibility="collapsed")
     
     st.markdown("---")
     
