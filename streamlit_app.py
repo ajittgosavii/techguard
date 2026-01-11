@@ -2779,7 +2779,7 @@ elif page == "🔨 Build & Run":
                 'Account': f.aws_account_id,
                 'Status': f.status.value,
                 'Source': f.source,
-                'Age': (utcnow() - f.created_at).days if f.created_at else 0
+                'Age': (datetime.now() - f.first_observed_at.replace(tzinfo=None)).days if f.first_observed_at else 0
             } for f in findings])
             
             st.dataframe(findings_df, use_container_width=True, hide_index=True)
@@ -5271,6 +5271,17 @@ elif page == "🔄 Sync":
     else:
         st.success("✅ AWS Connected - Ready to sync")
         
+        # Check if accounts are defined in secrets
+        accounts_in_secrets = False
+        secrets_accounts = []
+        try:
+            if "accounts" in st.secrets and "list" in st.secrets["accounts"]:
+                secrets_accounts = st.secrets["accounts"]["list"]
+                accounts_in_secrets = True
+                st.info(f"📋 Found {len(secrets_accounts)} account(s) defined in Streamlit Secrets")
+        except Exception:
+            pass
+        
         # Current database stats
         st.markdown("### 📊 Current Database")
         with get_db_session() as db:
@@ -5284,10 +5295,52 @@ elif page == "🔄 Sync":
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("### 🏢 AWS Organizations")
-            st.markdown("Sync accounts from AWS Organizations")
+            st.markdown("### 🏢 AWS Accounts")
             
-            if st.button("🔄 Sync Accounts from AWS", type="primary", key="sync_accounts"):
+            # Option 1: Load from Secrets
+            if accounts_in_secrets:
+                st.markdown("**Option 1: Load from Secrets** (Recommended)")
+                st.markdown(f"Found {len(secrets_accounts)} account(s) in your secrets configuration.")
+                
+                if st.button("🔄 Load Accounts from Secrets", type="primary", key="sync_accounts_secrets"):
+                    with st.spinner("Loading accounts from secrets..."):
+                        try:
+                            with get_db_session() as db:
+                                # Clear existing accounts
+                                db.query(Account).delete()
+                                
+                                synced_count = 0
+                                for acc in secrets_accounts:
+                                    account = Account(
+                                        account_id=acc.get('account_id', ''),
+                                        name=acc.get('account_name', f"Account-{acc.get('account_id', 'Unknown')}"),
+                                        email=acc.get('email', ''),
+                                        status=AccountStatus.ACTIVE,
+                                        environment=acc.get('priority', 'production'),
+                                        business_unit=acc.get('business_unit', 'Primary'),
+                                        compliance_score=0.0,
+                                        guardrails_enabled=True
+                                    )
+                                    db.add(account)
+                                    synced_count += 1
+                                
+                                db.commit()
+                            
+                            st.success(f"✅ Loaded {synced_count} account(s) from secrets!")
+                            st.cache_data.clear()
+                            time.sleep(1)
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Error loading accounts: {e}")
+                
+                st.markdown("---")
+            
+            # Option 2: Sync from AWS Organizations
+            st.markdown("**Option 2: Sync from AWS Organizations**")
+            st.markdown("Fetch accounts directly from AWS Organizations API")
+            
+            if st.button("🔄 Sync from AWS Organizations", type="secondary", key="sync_accounts_orgs"):
                 with st.spinner("Fetching accounts from AWS Organizations..."):
                     try:
                         # Create Organizations client
@@ -5316,9 +5369,9 @@ elif page == "🔄 Sync":
                                     name=acc.get('Name', f"Account-{acc['Id']}"),
                                     email=acc.get('Email', ''),
                                     status=AccountStatus.ACTIVE if acc.get('Status') == 'ACTIVE' else AccountStatus.SUSPENDED,
-                                    environment='production',  # Default, can be updated
+                                    environment='production',
                                     business_unit='Unknown',
-                                    compliance_score=0.0,  # Will be calculated from findings
+                                    compliance_score=0.0,
                                     guardrails_enabled=True
                                 )
                                 db.add(account)
@@ -5336,73 +5389,101 @@ elif page == "🔄 Sync":
                             st.error("❌ Access Denied. Your IAM role needs `organizations:ListAccounts` permission.")
                         elif 'AWSOrganizationsNotInUse' in str(e):
                             st.warning("⚠️ AWS Organizations is not enabled for this account.")
-                            st.info("This might be a standalone account. Adding it as a single account...")
-                            
-                            # Try to get current account info
-                            try:
-                                sts_client = boto3.client(
-                                    'sts',
-                                    aws_access_key_id=CONFIG['aws'].get('access_key_id'),
-                                    aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
-                                    region_name=CONFIG['aws'].get('region', 'us-east-1')
-                                )
-                                identity = sts_client.get_caller_identity()
-                                account_id = identity['Account']
-                                
-                                with get_db_session() as db:
-                                    db.query(Account).delete()
-                                    account = Account(
-                                        account_id=account_id,
-                                        name=f"AWS Account {account_id}",
-                                        email='',
-                                        status=AccountStatus.ACTIVE,
-                                        environment='production',
-                                        business_unit='Primary',
-                                        compliance_score=0.0,
-                                        guardrails_enabled=True
-                                    )
-                                    db.add(account)
-                                    db.commit()
-                                
-                                st.success(f"✅ Added standalone account: {account_id}")
-                                st.cache_data.clear()
-                                time.sleep(1)
-                                st.rerun()
-                            except Exception as e2:
-                                st.error(f"❌ Error: {e2}")
+                            st.info("Use 'Load from Secrets' option above, or add account manually.")
                         else:
                             st.error(f"❌ AWS Error: {e}")
                     except Exception as e:
                         st.error(f"❌ Error syncing accounts: {e}")
+            
+            # Option 3: Add current account
+            st.markdown("---")
+            st.markdown("**Option 3: Add Current Account**")
+            if st.button("➕ Add Current AWS Account", type="secondary", key="add_current"):
+                try:
+                    sts_client = boto3.client(
+                        'sts',
+                        aws_access_key_id=CONFIG['aws'].get('access_key_id'),
+                        aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
+                        region_name=CONFIG['aws'].get('region', 'us-east-1')
+                    )
+                    identity = sts_client.get_caller_identity()
+                    account_id = identity['Account']
+                    
+                    with get_db_session() as db:
+                        # Check if already exists
+                        existing = db.query(Account).filter(Account.account_id == account_id).first()
+                        if existing:
+                            st.warning(f"Account {account_id} already exists in database.")
+                        else:
+                            account = Account(
+                                account_id=account_id,
+                                name=f"AWS Account {account_id}",
+                                email='',
+                                status=AccountStatus.ACTIVE,
+                                environment='production',
+                                business_unit='Primary',
+                                compliance_score=0.0,
+                                guardrails_enabled=True
+                            )
+                            db.add(account)
+                            db.commit()
+                            st.success(f"✅ Added account: {account_id}")
+                            st.cache_data.clear()
+                            time.sleep(1)
+                            st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
         
         with col2:
-            st.markdown("### 🛡️ Security Hub")
+            st.markdown("### 🛡️ Security Hub Findings")
             st.markdown("Sync findings from AWS Security Hub")
+            
+            # Show which regions to sync
+            regions_to_sync = ['us-east-1']
+            try:
+                if accounts_in_secrets and secrets_accounts:
+                    # Get regions from first account in secrets
+                    regions_to_sync = secrets_accounts[0].get('regions', ['us-east-1'])
+                    st.info(f"Will sync from regions: {', '.join(regions_to_sync)}")
+            except Exception:
+                pass
             
             if st.button("🔄 Sync Findings from Security Hub", type="primary", key="sync_findings"):
                 with st.spinner("Fetching findings from Security Hub..."):
                     try:
-                        # Create Security Hub client
-                        sh_client = boto3.client(
-                            'securityhub',
-                            aws_access_key_id=CONFIG['aws'].get('access_key_id'),
-                            aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
-                            region_name=CONFIG['aws'].get('region', 'us-east-1')
-                        )
+                        all_findings = []
                         
-                        # Get findings (active ones)
-                        findings_response = sh_client.get_findings(
-                            Filters={
-                                'RecordState': [{'Value': 'ACTIVE', 'Comparison': 'EQUALS'}],
-                                'WorkflowStatus': [
-                                    {'Value': 'NEW', 'Comparison': 'EQUALS'},
-                                    {'Value': 'NOTIFIED', 'Comparison': 'EQUALS'}
-                                ]
-                            },
-                            MaxResults=100
-                        )
-                        
-                        findings = findings_response.get('Findings', [])
+                        for region in regions_to_sync:
+                            # Create Security Hub client for each region
+                            sh_client = boto3.client(
+                                'securityhub',
+                                aws_access_key_id=CONFIG['aws'].get('access_key_id'),
+                                aws_secret_access_key=CONFIG['aws'].get('secret_access_key'),
+                                region_name=region
+                            )
+                            
+                            try:
+                                # Get findings (active ones)
+                                findings_response = sh_client.get_findings(
+                                    Filters={
+                                        'RecordState': [{'Value': 'ACTIVE', 'Comparison': 'EQUALS'}],
+                                        'WorkflowStatus': [
+                                            {'Value': 'NEW', 'Comparison': 'EQUALS'},
+                                            {'Value': 'NOTIFIED', 'Comparison': 'EQUALS'}
+                                        ]
+                                    },
+                                    MaxResults=100
+                                )
+                                
+                                findings = findings_response.get('Findings', [])
+                                all_findings.extend(findings)
+                                st.write(f"Found {len(findings)} findings in {region}")
+                                
+                            except ClientError as e:
+                                if 'InvalidAccessException' in str(e):
+                                    st.warning(f"⚠️ Security Hub not enabled in {region}")
+                                else:
+                                    st.warning(f"⚠️ Error in {region}: {e}")
                         
                         # Map severity
                         def map_severity(sev_label):
@@ -5420,7 +5501,7 @@ elif page == "🔄 Sync":
                             db.query(Finding).delete()
                             
                             synced_count = 0
-                            for f in findings:
+                            for f in all_findings:
                                 # Extract resource info
                                 resources = f.get('Resources', [{}])
                                 resource = resources[0] if resources else {}
@@ -5429,7 +5510,7 @@ elif page == "🔄 Sync":
                                     finding_id=f.get('Id', str(uuid.uuid4())),
                                     source='SecurityHub',
                                     aws_account_id=f.get('AwsAccountId', ''),
-                                    region=f.get('Region', CONFIG['aws'].get('region', 'us-east-1')),
+                                    region=f.get('Region', 'us-east-1'),
                                     resource_type=resource.get('Type', 'Unknown'),
                                     resource_id=resource.get('Id', ''),
                                     title=f.get('Title', 'Unknown Finding'),
@@ -5471,9 +5552,6 @@ elif page == "🔄 Sync":
                     except ClientError as e:
                         if 'AccessDenied' in str(e):
                             st.error("❌ Access Denied. Your IAM role needs `securityhub:GetFindings` permission.")
-                        elif 'InvalidAccessException' in str(e):
-                            st.warning("⚠️ Security Hub is not enabled in this region.")
-                            st.info("Enable Security Hub in AWS Console first, or try a different region.")
                         else:
                             st.error(f"❌ AWS Error: {e}")
                     except Exception as e:
@@ -5481,10 +5559,18 @@ elif page == "🔄 Sync":
         
         st.markdown("---")
         
-        # Full sync option
-        st.markdown("### 🔄 Full Sync")
-        if st.button("🔄 Sync Everything (Accounts + Findings)", type="secondary"):
-            st.info("Click the individual sync buttons above for Accounts and Findings.")
+        # Show secrets account configuration
+        if accounts_in_secrets:
+            with st.expander("📋 Accounts Defined in Secrets"):
+                for i, acc in enumerate(secrets_accounts):
+                    st.markdown(f"""
+                    **Account {i+1}:**
+                    - ID: `{acc.get('account_id', 'N/A')}`
+                    - Name: {acc.get('account_name', 'N/A')}
+                    - Regions: {acc.get('regions', ['us-east-1'])}
+                    - Priority: {acc.get('priority', 'N/A')}
+                    - Role ARN: `{acc.get('role_arn', 'N/A')[:50]}...`
+                    """)
         
         # Show what permissions are needed
         with st.expander("📋 Required IAM Permissions"):
