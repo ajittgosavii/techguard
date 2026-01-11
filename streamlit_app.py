@@ -3938,59 +3938,484 @@ elif page == "📦 Account Lifecycle":
 
 # ==================== POLICY AS CODE PAGE ====================
 elif page == "📜 Policy as Code":
-    st.markdown('<div class="main-header">📜 Policy as Code Platform</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Unified Policy Management - Author, Test, Deploy, Monitor</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🛡️ Tech Guardrails Enterprise</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">AI-Powered Policy Management | SCP • OPA • KICS • Config Rules | FinOps & Compliance Integration</div>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📚 Policy Catalog", "✍️ Author/Edit", "🧪 Test & Validate",
-        "🚀 Deploy & Enforce", "📊 Monitor"
-    ])
+    # Mode selector
+    st.markdown("### Select Mode")
+    mode = st.radio(
+        "Select Mode",
+        ["🏢 Enterprise Management", "📜 Policy as Code", "🌐 Multi-Account"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
     
-    with tab1:
-        st.subheader("📚 Policy Catalog")
-        
-        policy_type = st.selectbox("Policy Type", ["All", "SCP", "OPA/Rego", "AWS Config", "KICS", "CloudFormation Guard"])
-        
-        policies = [
-            {"name": "Enforce S3 Encryption", "type": "SCP", "status": "Deployed", "accounts": 85, "compliance": "PCI-DSS"},
-            {"name": "Require MFA for Console", "type": "SCP", "status": "Deployed", "accounts": 100, "compliance": "SOC 2"},
-            {"name": "Block Public S3", "type": "SCP", "status": "Deployed", "accounts": 100, "compliance": "All"},
-            {"name": "Kubernetes Pod Security", "type": "OPA", "status": "Deployed", "accounts": 45, "compliance": "CIS"},
-            {"name": "Terraform Security Rules", "type": "KICS", "status": "Testing", "accounts": 0, "compliance": "Best Practice"},
-            {"name": "EC2 Instance Types", "type": "Config", "status": "Deployed", "accounts": 78, "compliance": "Cost"},
-        ]
-        
-        policies_df = pd.DataFrame(policies)
-        
-        if policy_type != "All":
-            policies_df = policies_df[policies_df['type'] == policy_type]
-        
-        st.dataframe(policies_df, use_container_width=True, hide_index=True)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Policies", len(policies))
-        with col2:
-            st.metric("Deployed", len([p for p in policies if p['status'] == 'Deployed']))
-        with col3:
-            st.metric("In Testing", len([p for p in policies if p['status'] == 'Testing']))
+    st.markdown("---")
     
-    with tab2:
-        st.subheader("✍️ Policy Author/Editor")
+    # ==================== ENTERPRISE MANAGEMENT MODE ====================
+    if mode == "🏢 Enterprise Management":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 2rem; border-radius: 12px; color: white; margin-bottom: 2rem;">
+            <h2 style="margin: 0; color: white;">🛡️ Tech Guardrails Enterprise</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; color: white;">Enterprise Policy Management • Policy as Code • Multi-Account Deployment</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        col1, col2 = st.columns([1, 2])
+        # Workflow tabs
+        workflow_tab = st.tabs(["📚 Library", "🔍 Scan", "🎯 Triage", "🚀 Deploy", "📊 Monitor"])
         
-        with col1:
-            new_policy_type = st.selectbox("Policy Type", ["SCP", "OPA/Rego", "AWS Config Rule", "KICS Query", "CloudFormation Guard"])
-            policy_name = st.text_input("Policy Name", placeholder="e.g., enforce-encryption-at-rest")
-            policy_description = st.text_area("Description", height=100)
-            compliance_tags = st.multiselect("Compliance Tags", ["PCI-DSS", "HIPAA", "SOC 2", "ISO 27001", "GDPR", "CIS"])
-        
-        with col2:
-            st.markdown("#### Policy Code")
+        # ========== LIBRARY TAB ==========
+        with workflow_tab[0]:
+            st.markdown("## 📚 Policy Library")
             
-            sample_code = {
-                "SCP": '''{
+            lib_tabs = st.tabs(["📋 Policy Library", "🔍 Compliance Scan", "🎯 AI Triage", "🚀 Deploy & Enforce", "📊 Monitor & Report"])
+            
+            with lib_tabs[0]:
+                st.markdown("### Policy Catalog")
+                
+                # Filter controls
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    policy_type_filter = st.selectbox("Policy Type", ["All", "SCP", "OPA/Rego", "AWS Config", "KICS", "CloudFormation Guard", "FinOps"])
+                with col2:
+                    compliance_filter = st.selectbox("Compliance Framework", ["All", "PCI-DSS", "HIPAA", "SOC 2", "ISO 27001", "GDPR", "CIS", "FinOps"])
+                with col3:
+                    status_filter = st.selectbox("Status", ["All", "Deployed", "Testing", "Draft", "Deprecated"])
+                
+                # Combined policy library with FinOps policies
+                all_policies = [
+                    # Security SCPs
+                    {"id": "SCP-001", "name": "Deny Root Account Usage", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "CIS, SOC 2", "violations": 0},
+                    {"id": "SCP-002", "name": "Require IMDSv2", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 95, "compliance": "CIS", "violations": 5},
+                    {"id": "SCP-003", "name": "Block Public S3 Buckets", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS, HIPAA", "violations": 0},
+                    {"id": "SCP-004", "name": "Enforce S3 Encryption", "type": "SCP", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS, HIPAA", "violations": 2},
+                    {"id": "SCP-005", "name": "Deny Region Outside Allowed List", "type": "SCP", "category": "Compliance", "status": "Deployed", "accounts": 85, "compliance": "GDPR", "violations": 0},
+                    
+                    # OPA Policies
+                    {"id": "OPA-001", "name": "Kubernetes Pod Security", "type": "OPA/Rego", "category": "Security", "status": "Deployed", "accounts": 45, "compliance": "CIS", "violations": 12},
+                    {"id": "OPA-002", "name": "Container Image Policy", "type": "OPA/Rego", "category": "Security", "status": "Testing", "accounts": 0, "compliance": "SOC 2", "violations": 0},
+                    {"id": "OPA-003", "name": "Network Policy Enforcement", "type": "OPA/Rego", "category": "Security", "status": "Deployed", "accounts": 32, "compliance": "CIS", "violations": 8},
+                    
+                    # Config Rules
+                    {"id": "CFG-001", "name": "EC2 Instance Types Allowed", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 78, "compliance": "FinOps", "violations": 23},
+                    {"id": "CFG-002", "name": "EBS Encryption Required", "type": "AWS Config", "category": "Security", "status": "Deployed", "accounts": 100, "compliance": "PCI-DSS", "violations": 0},
+                    {"id": "CFG-003", "name": "RDS Multi-AZ Required", "type": "AWS Config", "category": "Reliability", "status": "Deployed", "accounts": 65, "compliance": "SOC 2", "violations": 4},
+                    
+                    # KICS Policies
+                    {"id": "KICS-001", "name": "Terraform Security Rules", "type": "KICS", "category": "Security", "status": "Testing", "accounts": 0, "compliance": "Best Practice", "violations": 0},
+                    {"id": "KICS-002", "name": "CloudFormation Security", "type": "KICS", "category": "Security", "status": "Deployed", "accounts": 55, "compliance": "CIS", "violations": 15},
+                    
+                    # FinOps Policies
+                    {"id": "FIN-001", "name": "Require Cost Allocation Tags", "type": "SCP", "category": "FinOps", "status": "Deployed", "accounts": 100, "compliance": "FinOps", "violations": 45},
+                    {"id": "FIN-002", "name": "Block Expensive Instance Types", "type": "SCP", "category": "FinOps", "status": "Deployed", "accounts": 90, "compliance": "FinOps", "violations": 3},
+                    {"id": "FIN-003", "name": "Reserved Instance Coverage", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 50, "compliance": "FinOps", "violations": 28},
+                    {"id": "FIN-004", "name": "Savings Plan Utilization", "type": "AWS Config", "category": "FinOps", "status": "Testing", "accounts": 0, "compliance": "FinOps", "violations": 0},
+                    {"id": "FIN-005", "name": "Idle Resource Detection", "type": "AWS Config", "category": "FinOps", "status": "Deployed", "accounts": 100, "compliance": "FinOps", "violations": 67},
+                ]
+                
+                # Apply filters
+                filtered_policies = all_policies
+                if policy_type_filter != "All":
+                    filtered_policies = [p for p in filtered_policies if p['type'] == policy_type_filter]
+                if compliance_filter != "All":
+                    filtered_policies = [p for p in filtered_policies if compliance_filter in p['compliance']]
+                if status_filter != "All":
+                    filtered_policies = [p for p in filtered_policies if p['status'] == status_filter]
+                
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Policies", len(all_policies))
+                with col2:
+                    st.metric("Deployed", len([p for p in all_policies if p['status'] == 'Deployed']))
+                with col3:
+                    total_violations = sum(p['violations'] for p in all_policies)
+                    st.metric("Active Violations", total_violations)
+                with col4:
+                    finops_policies = len([p for p in all_policies if p['category'] == 'FinOps'])
+                    st.metric("FinOps Policies", finops_policies)
+                
+                st.markdown("---")
+                
+                # Display filtered policies
+                policies_df = pd.DataFrame(filtered_policies)
+                
+                # Add status colors
+                def style_status(val):
+                    colors = {"Deployed": "#10b981", "Testing": "#f59e0b", "Draft": "#6b7280", "Deprecated": "#ef4444"}
+                    return f'color: {colors.get(val, "#000")}'
+                
+                st.dataframe(policies_df, use_container_width=True, hide_index=True)
+                
+                # Quick actions
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    if st.button("➕ Create New Policy"):
+                        st.info("Use the Policy as Code mode to create new policies")
+                with col2:
+                    if st.button("📥 Import Policies"):
+                        st.info("Import from AWS Organizations, Git, or file")
+                with col3:
+                    if st.button("📤 Export All"):
+                        st.download_button("Download JSON", json.dumps(all_policies, indent=2), "policies.json", "application/json")
+                with col4:
+                    if st.button("🔄 Sync with AWS"):
+                        st.success("Policies synced with AWS Organizations")
+            
+            # ========== COMPLIANCE SCAN TAB ==========
+            with lib_tabs[1]:
+                st.markdown("### 🔍 Compliance Scan")
+                
+                # Scan configuration
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### Scan Configuration")
+                    scan_scope = st.multiselect("Target Accounts", ["All Accounts", "Production", "Development", "Sandbox"], default=["All Accounts"])
+                    scan_frameworks = st.multiselect("Compliance Frameworks", 
+                        ["PCI-DSS", "HIPAA", "SOC 2", "ISO 27001", "GDPR", "CIS Benchmarks", "AWS Well-Architected", "FinOps Best Practices"],
+                        default=["CIS Benchmarks", "FinOps Best Practices"])
+                    scan_depth = st.radio("Scan Depth", ["Quick Scan", "Standard", "Deep Scan"], horizontal=True)
+                
+                with col2:
+                    st.markdown("#### Scan Actions")
+                    if st.button("🚀 Start Compliance Scan", type="primary", use_container_width=True):
+                        with st.spinner("Running compliance scan..."):
+                            progress = st.progress(0)
+                            for i in range(100):
+                                time.sleep(0.03)
+                                progress.progress(i + 1)
+                            st.success("✅ Compliance scan completed!")
+                    
+                    if st.button("📅 Schedule Recurring Scan", use_container_width=True):
+                        st.info("Configure scan schedule in Settings")
+                    
+                    st.markdown("#### Last Scan Results")
+                    st.markdown(f"**Last Scan:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                    st.markdown("**Duration:** 12 minutes")
+                    st.markdown("**Resources Scanned:** 1,247")
+                
+                st.markdown("---")
+                
+                # Compliance Overview
+                st.markdown("### Compliance Overview")
+                
+                compliance_data = [
+                    {"framework": "CIS AWS Foundations", "score": 87, "passed": 145, "failed": 21, "total": 166},
+                    {"framework": "PCI-DSS", "score": 92, "passed": 112, "failed": 10, "total": 122},
+                    {"framework": "SOC 2", "score": 89, "passed": 89, "failed": 11, "total": 100},
+                    {"framework": "HIPAA", "score": 94, "passed": 47, "failed": 3, "total": 50},
+                    {"framework": "FinOps Best Practices", "score": 72, "passed": 36, "failed": 14, "total": 50},
+                    {"framework": "AWS Well-Architected", "score": 81, "passed": 65, "failed": 15, "total": 80},
+                ]
+                
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    comp_df = pd.DataFrame(compliance_data)
+                    fig = px.bar(comp_df, x='framework', y=['passed', 'failed'], 
+                                title='Compliance by Framework',
+                                barmode='stack',
+                                color_discrete_map={'passed': '#10b981', 'failed': '#ef4444'})
+                    fig.update_layout(height=400, xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    st.markdown("#### Compliance Scores")
+                    for item in compliance_data:
+                        score_color = "#10b981" if item['score'] >= 85 else "#f59e0b" if item['score'] >= 70 else "#ef4444"
+                        st.markdown(f"""
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>{item['framework']}</span>
+                            <span style="color: {score_color}; font-weight: bold;">{item['score']}%</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.progress(item['score'] / 100)
+                
+                # Findings by severity
+                st.markdown("---")
+                st.markdown("### Findings by Severity")
+                
+                findings_summary = [
+                    {"severity": "Critical", "count": 5, "color": "#dc2626"},
+                    {"severity": "High", "count": 23, "color": "#f97316"},
+                    {"severity": "Medium", "count": 45, "color": "#f59e0b"},
+                    {"severity": "Low", "count": 67, "color": "#22c55e"},
+                ]
+                
+                col1, col2, col3, col4 = st.columns(4)
+                cols = [col1, col2, col3, col4]
+                
+                for i, finding in enumerate(findings_summary):
+                    with cols[i]:
+                        st.markdown(f"""
+                        <div style="background: {finding['color']}20; border-left: 4px solid {finding['color']}; padding: 1rem; border-radius: 8px;">
+                            <h3 style="margin: 0; color: {finding['color']};">{finding['count']}</h3>
+                            <p style="margin: 0; color: #64748b;">{finding['severity']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            # ========== AI TRIAGE TAB ==========
+            with lib_tabs[2]:
+                st.markdown("### 🎯 AI Triage")
+                st.markdown("*Claude AI analyzes findings and prioritizes remediation actions*")
+                
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    # Triage queue
+                    st.markdown("#### Triage Queue")
+                    
+                    triage_items = [
+                        {"id": "TRG-001", "finding": "Public S3 Bucket Detected", "severity": "Critical", "account": "prod-account-001", "ai_priority": "Immediate", "ai_confidence": 98},
+                        {"id": "TRG-002", "finding": "Unencrypted EBS Volume", "severity": "High", "account": "prod-account-002", "ai_priority": "High", "ai_confidence": 95},
+                        {"id": "TRG-003", "finding": "Idle EC2 Instance (30+ days)", "severity": "Medium", "account": "dev-account-001", "ai_priority": "Medium", "ai_confidence": 87},
+                        {"id": "TRG-004", "finding": "Missing Cost Allocation Tags", "severity": "Low", "account": "sandbox-001", "ai_priority": "Low", "ai_confidence": 92},
+                        {"id": "TRG-005", "finding": "Root Account Access Key", "severity": "Critical", "account": "prod-account-001", "ai_priority": "Immediate", "ai_confidence": 99},
+                        {"id": "TRG-006", "finding": "Oversized RDS Instance", "severity": "Medium", "account": "prod-account-003", "ai_priority": "Medium", "ai_confidence": 85},
+                    ]
+                    
+                    for item in triage_items:
+                        priority_color = {"Immediate": "#dc2626", "High": "#f97316", "Medium": "#f59e0b", "Low": "#22c55e"}.get(item['ai_priority'], "#6b7280")
+                        
+                        with st.expander(f"🎯 {item['finding']} ({item['severity']})"):
+                            col_a, col_b, col_c = st.columns(3)
+                            with col_a:
+                                st.markdown(f"**Account:** {item['account']}")
+                                st.markdown(f"**Severity:** {item['severity']}")
+                            with col_b:
+                                st.markdown(f"**AI Priority:** <span style='color: {priority_color}; font-weight: bold;'>{item['ai_priority']}</span>", unsafe_allow_html=True)
+                                st.markdown(f"**AI Confidence:** {item['ai_confidence']}%")
+                            with col_c:
+                                if st.button("🤖 Get AI Analysis", key=f"ai_{item['id']}"):
+                                    with st.spinner("Analyzing..."):
+                                        time.sleep(1)
+                                        st.info("AI recommendation: Implement automated remediation for this finding type.")
+                                if st.button("✅ Mark Resolved", key=f"resolve_{item['id']}"):
+                                    st.success("Marked as resolved")
+                
+                with col2:
+                    st.markdown("#### AI Triage Summary")
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                        <h3 style="margin: 0; color: white;">AI Triage Active</h3>
+                        <p style="font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: white;">6</p>
+                        <p style="margin: 0; opacity: 0.9; color: white;">Items in queue</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("#### Priority Distribution")
+                    priority_data = pd.DataFrame([
+                        {"Priority": "Immediate", "Count": 2},
+                        {"Priority": "High", "Count": 1},
+                        {"Priority": "Medium", "Count": 2},
+                        {"Priority": "Low", "Count": 1},
+                    ])
+                    fig = px.pie(priority_data, values='Count', names='Priority',
+                                color='Priority',
+                                color_discrete_map={"Immediate": "#dc2626", "High": "#f97316", "Medium": "#f59e0b", "Low": "#22c55e"})
+                    fig.update_layout(height=250)
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    if st.button("🤖 Run AI Batch Triage", type="primary", use_container_width=True):
+                        with st.spinner("Running AI triage on all findings..."):
+                            time.sleep(2)
+                            st.success("AI triage completed! 6 items prioritized.")
+            
+            # ========== DEPLOY & ENFORCE TAB ==========
+            with lib_tabs[3]:
+                st.markdown("### 🚀 Deploy & Enforce")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### Deployment Configuration")
+                    
+                    deploy_policy = st.selectbox("Select Policy to Deploy", 
+                        [p['name'] for p in all_policies if p['status'] in ['Testing', 'Draft']])
+                    
+                    deployment_target = st.radio("Deployment Target", 
+                        ["All Accounts", "Specific OUs", "Specific Accounts", "Phased Rollout"])
+                    
+                    if deployment_target == "Specific OUs":
+                        target_ous = st.multiselect("Select OUs", ["Production", "Development", "Sandbox", "Security"])
+                    elif deployment_target == "Specific Accounts":
+                        target_accounts = st.multiselect("Select Accounts", ["123456789012", "234567890123", "345678901234"])
+                    elif deployment_target == "Phased Rollout":
+                        st.slider("Initial Rollout %", 1, 100, 10)
+                        st.slider("Days between phases", 1, 14, 3)
+                    
+                    enforcement_mode = st.radio("Enforcement Mode", 
+                        ["Monitor Only (Audit)", "Warn & Alert", "Enforce (Block)"])
+                
+                with col2:
+                    st.markdown("#### Deployment Preview")
+                    
+                    st.markdown("""
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p><strong>Policy:</strong> {}</p>
+                        <p><strong>Target:</strong> All Accounts (100 accounts)</p>
+                        <p><strong>Mode:</strong> Monitor Only</p>
+                        <p><strong>Estimated Impact:</strong> 15 resources</p>
+                    </div>
+                    """.format(deploy_policy if 'deploy_policy' in dir() else "Select a policy"), unsafe_allow_html=True)
+                    
+                    st.markdown("#### Pre-deployment Checks")
+                    st.success("✅ Policy syntax validated")
+                    st.success("✅ No conflicting policies")
+                    st.warning("⚠️ 3 accounts have pending exceptions")
+                    st.success("✅ Rollback plan configured")
+                    
+                    if st.button("🚀 Deploy Policy", type="primary", use_container_width=True):
+                        with st.spinner("Deploying policy..."):
+                            progress = st.progress(0)
+                            for i in range(100):
+                                time.sleep(0.03)
+                                progress.progress(i + 1)
+                            st.success("✅ Policy deployed successfully!")
+                
+                st.markdown("---")
+                st.markdown("#### Recent Deployments")
+                
+                recent_deployments = [
+                    {"policy": "Block Public S3", "target": "All Accounts", "status": "Deployed", "date": "2024-01-10", "by": "admin@company.com"},
+                    {"policy": "Require MFA", "target": "Production", "status": "Deployed", "date": "2024-01-09", "by": "security@company.com"},
+                    {"policy": "Cost Allocation Tags", "target": "All Accounts", "status": "Rolling Out", "date": "2024-01-08", "by": "finops@company.com"},
+                ]
+                
+                st.dataframe(pd.DataFrame(recent_deployments), use_container_width=True, hide_index=True)
+            
+            # ========== MONITOR & REPORT TAB ==========
+            with lib_tabs[4]:
+                st.markdown("### 📊 Monitor & Report")
+                
+                # Key metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Policies Active", 18, delta="+2 this week")
+                with col2:
+                    st.metric("Violations Blocked", 1547, delta="+234 today")
+                with col3:
+                    st.metric("Compliance Rate", "94.2%", delta="+1.3%")
+                with col4:
+                    st.metric("Cost Savings from Policies", "$45,230", delta="+$5,200")
+                
+                st.markdown("---")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### Policy Violations Trend")
+                    violation_df = pd.DataFrame({
+                        'Date': pd.date_range(start='2024-12-15', periods=30, freq='D'),
+                        'Blocked': [random.randint(30, 80) for _ in range(30)],
+                        'Warned': [random.randint(10, 40) for _ in range(30)],
+                        'Allowed (Exceptions)': [random.randint(5, 15) for _ in range(30)]
+                    })
+                    
+                    fig = px.line(violation_df, x='Date', y=['Blocked', 'Warned', 'Allowed (Exceptions)'],
+                                title='Policy Enforcement Over Time')
+                    fig.update_layout(height=350)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    st.markdown("#### Top Violated Policies")
+                    top_violated = [
+                        {"policy": "Cost Allocation Tags", "violations": 67, "category": "FinOps"},
+                        {"policy": "Idle Resource Detection", "violations": 45, "category": "FinOps"},
+                        {"policy": "Reserved Instance Coverage", "violations": 28, "category": "FinOps"},
+                        {"policy": "EC2 Instance Types", "violations": 23, "category": "FinOps"},
+                        {"policy": "KICS CloudFormation", "violations": 15, "category": "Security"},
+                    ]
+                    
+                    for v in top_violated:
+                        category_color = "#10b981" if v['category'] == "Security" else "#3b82f6"
+                        st.markdown(f"""
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: #f8fafc; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <span>{v['policy']} <small style="color: {category_color};">({v['category']})</small></span>
+                            <span style="font-weight: bold; color: #ef4444;">{v['violations']}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                st.markdown("---")
+                
+                # FinOps Impact Section
+                st.markdown("#### 💰 FinOps Policy Impact")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                        <h4 style="margin: 0; color: white;">Cost Savings from Policies</h4>
+                        <p style="font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: white;">$45,230</p>
+                        <p style="margin: 0; opacity: 0.9; color: white;">This month</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                        <h4 style="margin: 0; color: white;">Resources Optimized</h4>
+                        <p style="font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: white;">234</p>
+                        <p style="margin: 0; opacity: 0.9; color: white;">Auto-remediated</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown("""
+                    <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                        <h4 style="margin: 0; color: white;">Waste Prevented</h4>
+                        <p style="font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: white;">$12,450</p>
+                        <p style="margin: 0; opacity: 0.9; color: white;">Blocked deployments</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Report generation
+                st.markdown("---")
+                st.markdown("#### 📑 Generate Reports")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("📊 Executive Summary", use_container_width=True):
+                        st.success("Report generated! Check Downloads.")
+                with col2:
+                    if st.button("🔍 Compliance Report", use_container_width=True):
+                        st.success("Report generated! Check Downloads.")
+                with col3:
+                    if st.button("💰 FinOps Impact Report", use_container_width=True):
+                        st.success("Report generated! Check Downloads.")
+    
+    # ==================== POLICY AS CODE MODE ====================
+    elif mode == "📜 Policy as Code":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 2rem; border-radius: 12px; color: white; margin-bottom: 2rem;">
+            <h2 style="margin: 0; color: white;">📜 Policy as Code</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; color: white;">Author • Test • Validate • Deploy</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        pac_tabs = st.tabs(["✍️ Author/Edit", "🧪 Test & Validate", "🔄 Version Control", "📚 Templates"])
+        
+        with pac_tabs[0]:
+            st.markdown("### ✍️ Policy Author/Editor")
+            
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                new_policy_type = st.selectbox("Policy Type", 
+                    ["SCP (Service Control Policy)", "OPA/Rego", "AWS Config Rule", "KICS Query", "CloudFormation Guard", "FinOps Policy"])
+                policy_name = st.text_input("Policy Name", placeholder="e.g., enforce-encryption-at-rest")
+                policy_description = st.text_area("Description", height=80)
+                compliance_tags = st.multiselect("Compliance Tags", 
+                    ["PCI-DSS", "HIPAA", "SOC 2", "ISO 27001", "GDPR", "CIS", "FinOps", "Cost Optimization"])
+                severity = st.select_slider("Severity", options=["Low", "Medium", "High", "Critical"])
+            
+            with col2:
+                st.markdown("#### Policy Code")
+                
+                sample_code = {
+                    "SCP (Service Control Policy)": '''{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -4006,112 +4431,243 @@ elif page == "📜 Policy as Code":
         }
     ]
 }''',
-                "OPA/Rego": '''package kubernetes.admission
+                    "OPA/Rego": '''package kubernetes.admission
 
 deny[msg] {
     input.request.kind.kind == "Pod"
     not input.request.object.spec.securityContext.runAsNonRoot
     msg := "Pods must run as non-root user"
 }''',
+                    "FinOps Policy": '''{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "RequireCostAllocationTags",
+            "Effect": "Deny",
+            "Action": ["ec2:RunInstances", "rds:CreateDBInstance"],
+            "Resource": "*",
+            "Condition": {
+                "Null": {
+                    "aws:RequestTag/CostCenter": "true",
+                    "aws:RequestTag/Project": "true",
+                    "aws:RequestTag/Environment": "true"
+                }
             }
+        }
+    ]
+}''',
+                }
+                
+                policy_code = st.text_area("Policy Code", 
+                    value=sample_code.get(new_policy_type, "# Enter your policy code here"), 
+                    height=350)
             
-            policy_code = st.text_area("Policy Code", value=sample_code.get(new_policy_type, ""), height=300)
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                if st.button("💾 Save Draft", use_container_width=True):
+                    st.success("Policy saved as draft")
+            with col2:
+                if st.button("🤖 AI Enhance", use_container_width=True):
+                    with st.spinner("Enhancing with Claude AI..."):
+                        time.sleep(1)
+                        st.info("AI suggestions: Added best practice conditions and improved error messages")
+            with col3:
+                if st.button("✅ Validate", use_container_width=True):
+                    st.success("✅ Policy syntax is valid")
+            with col4:
+                if st.button("📤 Submit for Review", use_container_width=True):
+                    st.success("Policy submitted for review")
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("💾 Save Draft"):
-                st.success("Policy saved as draft")
-        with col2:
-            if st.button("🤖 AI Enhance"):
-                with st.spinner("Enhancing policy with AI..."):
-                    st.info("AI suggestions applied!")
-        with col3:
-            if st.button("📤 Submit for Review"):
-                st.success("Policy submitted for review")
-    
-    with tab3:
-        st.subheader("🧪 Test & Validate")
-        
-        test_policy = st.selectbox("Select Policy to Test", [p['name'] for p in policies])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### Syntax Validation")
-            if st.button("🔍 Validate Syntax"):
-                st.success("✅ Syntax is valid")
-        
-        with col2:
-            st.markdown("#### Dry Run Test")
-            test_account = st.selectbox("Test Account", ["123456789012", "234567890123", "345678901234"])
-            if st.button("🧪 Run Dry Test"):
-                with st.spinner("Running simulation..."):
-                    time.sleep(1)
-                    st.success("✅ Dry run completed - 0 violations found")
-        
-        st.markdown("---")
-        st.markdown("#### Test Cases")
-        
-        test_cases = [
-            {"name": "Valid encrypted S3 upload", "expected": "Allow", "actual": "Allow", "status": "✅ Pass"},
-            {"name": "Unencrypted S3 upload", "expected": "Deny", "actual": "Deny", "status": "✅ Pass"},
-            {"name": "Cross-account access", "expected": "Deny", "actual": "Deny", "status": "✅ Pass"},
-        ]
-        
-        st.dataframe(pd.DataFrame(test_cases), use_container_width=True, hide_index=True)
-    
-    with tab4:
-        st.subheader("🚀 Deploy & Enforce")
-        
-        deploy_policy = st.selectbox("Select Policy", [p['name'] for p in policies], key="deploy_select")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            deployment_target = st.radio("Deployment Target", ["All Accounts", "Specific OUs", "Specific Accounts"])
+        with pac_tabs[1]:
+            st.markdown("### 🧪 Test & Validate")
             
-            if deployment_target == "Specific OUs":
-                target_ous = st.multiselect("Select OUs", ["Production", "Development", "Sandbox"])
-            elif deployment_target == "Specific Accounts":
-                target_accounts = st.multiselect("Select Accounts", ["123456789012", "234567890123"])
+            test_policy = st.selectbox("Select Policy to Test", 
+                ["enforce-encryption-at-rest", "require-mfa-console", "block-public-s3", "require-cost-tags"])
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Syntax Validation")
+                if st.button("🔍 Validate Syntax"):
+                    st.success("✅ JSON syntax valid")
+                    st.success("✅ Policy structure valid")
+                    st.success("✅ No deprecated actions")
+            
+            with col2:
+                st.markdown("#### Dry Run Test")
+                test_account = st.selectbox("Test Account", ["123456789012 (Production)", "234567890123 (Development)"])
+                if st.button("🧪 Run Simulation"):
+                    with st.spinner("Running simulation..."):
+                        time.sleep(1)
+                        st.success("✅ Dry run completed")
+                        st.info("Results: 0 violations, 15 resources scanned")
+            
+            st.markdown("---")
+            st.markdown("#### Test Cases")
+            
+            test_cases = [
+                {"name": "Valid encrypted S3 upload", "expected": "Allow", "actual": "Allow", "status": "✅ Pass"},
+                {"name": "Unencrypted S3 upload", "expected": "Deny", "actual": "Deny", "status": "✅ Pass"},
+                {"name": "Cross-account access", "expected": "Deny", "actual": "Deny", "status": "✅ Pass"},
+                {"name": "Missing cost tags", "expected": "Deny", "actual": "Deny", "status": "✅ Pass"},
+            ]
+            
+            st.dataframe(pd.DataFrame(test_cases), use_container_width=True, hide_index=True)
         
-        with col2:
-            enforcement_mode = st.radio("Enforcement Mode", ["Monitor Only", "Warn", "Enforce"])
-            rollout_strategy = st.radio("Rollout Strategy", ["Immediate", "Gradual (10% per day)", "Canary (1 account first)"])
+        with pac_tabs[2]:
+            st.markdown("### 🔄 Version Control")
+            
+            st.markdown("#### Policy Versions")
+            versions = [
+                {"version": "v3.0.0", "date": "2024-01-10", "author": "admin@company.com", "status": "Current", "changes": "Added FinOps conditions"},
+                {"version": "v2.1.0", "date": "2024-01-05", "author": "security@company.com", "status": "Previous", "changes": "Fixed false positives"},
+                {"version": "v2.0.0", "date": "2023-12-20", "author": "admin@company.com", "status": "Archived", "changes": "Major rewrite"},
+            ]
+            
+            st.dataframe(pd.DataFrame(versions), use_container_width=True, hide_index=True)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("↩️ Rollback to Previous"):
+                    st.warning("Confirm rollback to v2.1.0?")
+            with col2:
+                if st.button("📋 Compare Versions"):
+                    st.info("Version diff viewer opened")
+            with col3:
+                if st.button("📥 Export Version History"):
+                    st.success("History exported")
         
-        if st.button("🚀 Deploy Policy", type="primary"):
-            with st.spinner("Deploying policy..."):
-                progress = st.progress(0)
-                for i in range(100):
-                    time.sleep(0.02)
-                    progress.progress(i + 1)
-                st.success(f"✅ Policy '{deploy_policy}' deployed successfully!")
+        with pac_tabs[3]:
+            st.markdown("### 📚 Policy Templates")
+            
+            templates = [
+                {"name": "S3 Encryption Required", "type": "SCP", "category": "Security", "popularity": "⭐⭐⭐⭐⭐"},
+                {"name": "Block Public Access", "type": "SCP", "category": "Security", "popularity": "⭐⭐⭐⭐⭐"},
+                {"name": "Require MFA", "type": "SCP", "category": "Identity", "popularity": "⭐⭐⭐⭐"},
+                {"name": "Cost Allocation Tags", "type": "SCP", "category": "FinOps", "popularity": "⭐⭐⭐⭐⭐"},
+                {"name": "Instance Type Restrictions", "type": "SCP", "category": "FinOps", "popularity": "⭐⭐⭐⭐"},
+                {"name": "Region Restrictions", "type": "SCP", "category": "Compliance", "popularity": "⭐⭐⭐⭐"},
+                {"name": "Pod Security Standards", "type": "OPA", "category": "Kubernetes", "popularity": "⭐⭐⭐⭐"},
+                {"name": "Terraform Security", "type": "KICS", "category": "IaC", "popularity": "⭐⭐⭐"},
+            ]
+            
+            st.dataframe(pd.DataFrame(templates), use_container_width=True, hide_index=True)
+            
+            if st.button("📥 Import Selected Template"):
+                st.success("Template imported to editor!")
     
-    with tab5:
-        st.subheader("📊 Policy Monitoring")
+    # ==================== MULTI-ACCOUNT MODE ====================
+    elif mode == "🌐 Multi-Account":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); padding: 2rem; border-radius: 12px; color: white; margin-bottom: 2rem;">
+            <h2 style="margin: 0; color: white;">🌐 Multi-Account Governance</h2>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; color: white;">AWS Organizations • StackSets • Cross-Account Management</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Policy effectiveness
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Policies Deployed", 45)
-        with col2:
-            st.metric("Violations Blocked", 1234)
-        with col3:
-            st.metric("Compliance Rate", "96.5%")
-        with col4:
-            st.metric("False Positives", "2.1%")
+        ma_tabs = st.tabs(["🏢 Organization View", "📊 Account Status", "🔄 StackSets", "⚙️ Config Aggregator"])
         
-        st.markdown("---")
+        with ma_tabs[0]:
+            st.markdown("### 🏢 AWS Organization Structure")
+            
+            # Organization tree
+            org_structure = """
+            ```
+            📁 Root (r-xxxx)
+            ├── 📁 Security OU
+            │   ├── 🔒 Security-Audit (111111111111)
+            │   └── 🔒 Security-Logging (222222222222)
+            ├── 📁 Production OU
+            │   ├── 🖥️ Prod-App-1 (333333333333)
+            │   ├── 🖥️ Prod-App-2 (444444444444)
+            │   └── 🗄️ Prod-Data (555555555555)
+            ├── 📁 Development OU
+            │   ├── 💻 Dev-Team-A (666666666666)
+            │   └── 💻 Dev-Team-B (777777777777)
+            └── 📁 Sandbox OU
+                └── 🧪 Sandbox-1 (888888888888)
+            ```
+            """
+            st.markdown(org_structure)
+            
+            # OU-level policy assignment
+            st.markdown("#### Policy Assignment by OU")
+            
+            ou_policies = [
+                {"OU": "Root", "SCPs": 3, "Config Rules": 15, "Compliance": "95%"},
+                {"OU": "Security", "SCPs": 5, "Config Rules": 25, "Compliance": "99%"},
+                {"OU": "Production", "SCPs": 8, "Config Rules": 30, "Compliance": "97%"},
+                {"OU": "Development", "SCPs": 4, "Config Rules": 20, "Compliance": "89%"},
+                {"OU": "Sandbox", "SCPs": 2, "Config Rules": 10, "Compliance": "75%"},
+            ]
+            
+            st.dataframe(pd.DataFrame(ou_policies), use_container_width=True, hide_index=True)
         
-        # Violation trend
-        violation_df = pd.DataFrame({
-            'Date': pd.date_range(start='2024-12-01', periods=30, freq='D'),
-            'Blocked': [random.randint(20, 80) for _ in range(30)],
-            'Warned': [random.randint(10, 40) for _ in range(30)]
-        })
+        with ma_tabs[1]:
+            st.markdown("### 📊 Account Compliance Status")
+            
+            with get_db_session() as db:
+                accounts = db.query(Account).all()
+                
+                if accounts:
+                    account_data = []
+                    for acc in accounts:
+                        account_data.append({
+                            "Account ID": acc.account_id,
+                            "Name": acc.name,
+                            "Status": acc.status.value if acc.status else "Unknown",
+                            "Environment": acc.environment or "Unknown",
+                            "Guardrails": "✅" if acc.guardrails_enabled else "❌",
+                            "Compliance": f"{acc.compliance_score:.0f}%" if acc.compliance_score else "N/A"
+                        })
+                    
+                    st.dataframe(pd.DataFrame(account_data), use_container_width=True, hide_index=True)
+                else:
+                    st.info("No accounts found. Go to 🔄 Sync page to load accounts.")
         
-        fig = px.line(violation_df, x='Date', y=['Blocked', 'Warned'], title='Policy Violations Over Time')
-        st.plotly_chart(fig, use_container_width=True)
+        with ma_tabs[2]:
+            st.markdown("### 🔄 CloudFormation StackSets")
+            
+            stacksets = [
+                {"name": "SecurityBaseline", "status": "ACTIVE", "accounts": 8, "regions": 4, "drift": "IN_SYNC"},
+                {"name": "LoggingConfig", "status": "ACTIVE", "accounts": 8, "regions": 4, "drift": "IN_SYNC"},
+                {"name": "CostTagging", "status": "ACTIVE", "accounts": 8, "regions": 4, "drift": "DRIFTED"},
+                {"name": "NetworkBaseline", "status": "ACTIVE", "accounts": 6, "regions": 2, "drift": "IN_SYNC"},
+            ]
+            
+            st.dataframe(pd.DataFrame(stacksets), use_container_width=True, hide_index=True)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("➕ Create StackSet"):
+                    st.info("StackSet creation wizard opened")
+            with col2:
+                if st.button("🔄 Detect Drift"):
+                    st.warning("Drift detected in CostTagging StackSet")
+            with col3:
+                if st.button("🔧 Remediate Drift"):
+                    st.success("Drift remediation initiated")
+        
+        with ma_tabs[3]:
+            st.markdown("### ⚙️ AWS Config Aggregator")
+            
+            st.markdown("#### Aggregated Compliance View")
+            
+            config_data = [
+                {"Rule": "s3-bucket-public-read-prohibited", "Compliant": 45, "Non-Compliant": 0, "Total": 45},
+                {"Rule": "encrypted-volumes", "Compliant": 120, "Non-Compliant": 5, "Total": 125},
+                {"Rule": "required-tags", "Compliant": 89, "Non-Compliant": 36, "Total": 125},
+                {"Rule": "iam-password-policy", "Compliant": 8, "Non-Compliant": 0, "Total": 8},
+            ]
+            
+            config_df = pd.DataFrame(config_data)
+            
+            fig = px.bar(config_df, x='Rule', y=['Compliant', 'Non-Compliant'], 
+                        barmode='stack',
+                        color_discrete_map={'Compliant': '#10b981', 'Non-Compliant': '#ef4444'},
+                        title='Config Rules Compliance')
+            fig.update_layout(height=350, xaxis_tickangle=-45)
+            st.plotly_chart(fig, use_container_width=True)
 
 # ==================== MULTI-ACCOUNT MANAGER PAGE ====================
 elif page == "🏢 Multi-Account Manager":
