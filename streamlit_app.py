@@ -2193,9 +2193,13 @@ def get_stats(db: Session) -> Dict:
         # Formula: Start at 100, deduct based on severity
         # Critical: -5 each, High: -2 each, Medium: -0.5 each, Low: -0.1 each
         # Minimum score: 0
-        if total_accounts == 0 and total_findings == 0:
+        if total_accounts == 0 and total_findings == 0 and total_policies == 0:
             # No data at all - show 0 to indicate need for data
             compliance_score = 0.0
+        elif total_policies == 0 and total_findings == 0:
+            # Have accounts but no policies deployed - can't measure compliance
+            # Show N/A indicator (use -1 as flag)
+            compliance_score = -1.0  # Will be displayed as "N/A"
         else:
             calculated_score = 100 - (critical * 5) - (high * 2) - (medium * 0.5) - (low * 0.1)
             compliance_score = max(0, min(100, calculated_score))
@@ -2481,7 +2485,11 @@ with st.sidebar:
     st.markdown("### Quick Stats")
     st.metric("Accounts", stats["total_accounts"])
     st.metric("Policies", stats["total_policies"])
-    st.metric("Compliance", f"{stats['compliance_score']:.0f}%")
+    # Handle N/A compliance (-1 flag)
+    if stats['compliance_score'] < 0:
+        st.metric("Compliance", "N/A", help="No policies deployed - cannot measure compliance")
+    else:
+        st.metric("Compliance", f"{stats['compliance_score']:.0f}%")
     
     # Module Status
     st.markdown("---")
@@ -2538,6 +2546,10 @@ if page == "🏠 Dashboard":
             </div>
             """, unsafe_allow_html=True)
     
+    # Show helpful message if accounts exist but no policies
+    if not is_demo_mode() and stats['total_accounts'] > 0 and stats['total_policies'] == 0:
+        st.info("💡 **Tip**: You have accounts but no policies deployed. Go to **Evolve & Improve → Policy as Code** to create and deploy security policies for compliance monitoring.")
+    
     # Get dynamic health data
     health = get_cached_health(current_mode())
     coverage = get_cached_coverage(current_mode())
@@ -2582,11 +2594,13 @@ if page == "🏠 Dashboard":
         """, unsafe_allow_html=True)
     
     with col4:
+        compliance_display = "N/A" if stats['compliance_score'] < 0 else f"{stats['compliance_score']:.0f}%"
+        compliance_subtitle = "No policies deployed" if stats['compliance_score'] < 0 else "Overall Score"
         st.markdown(f"""
             <div class="metric-card">
                 <h4 style="color: #059669;">📊 Compliance</h4>
-                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{stats['compliance_score']:.0f}%</p>
-                <p style="color: #64748b; margin: 0;">Overall Score</p>
+                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{compliance_display}</p>
+                <p style="color: #64748b; margin: 0;">{compliance_subtitle}</p>
             </div>
         """, unsafe_allow_html=True)
     
