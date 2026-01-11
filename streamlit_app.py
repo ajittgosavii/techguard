@@ -931,17 +931,20 @@ def calculate_operational_health() -> Dict:
         # 4. Calculate remediation success rate
         total_remediations = db.query(Remediation).count()
         successful_remediations = db.query(Remediation).filter(Remediation.status == RemediationStatus.COMPLETED).count()
-        remediation_rate = (successful_remediations / total_remediations * 100) if total_remediations > 0 else 100
+        remediation_has_data = total_remediations > 0
+        remediation_rate = (successful_remediations / total_remediations * 100) if remediation_has_data else 0
         
         # 5. Calculate policy coverage
         total_policies = db.query(Policy).count()
         deployed_policies = db.query(Policy).filter(Policy.status == PolicyStatus.DEPLOYED).count()
-        policy_coverage = (deployed_policies / total_policies * 100) if total_policies > 0 else 0
+        policy_has_data = total_policies > 0
+        policy_coverage = (deployed_policies / total_policies * 100) if policy_has_data else 0
         
         # 6. Calculate account coverage
         total_accounts = db.query(Account).count()
         active_accounts = db.query(Account).filter(Account.status == AccountStatus.ACTIVE, Account.guardrails_enabled == True).count()
-        account_coverage = (active_accounts / total_accounts * 100) if total_accounts > 0 else 0
+        account_has_data = total_accounts > 0
+        account_coverage = (active_accounts / total_accounts * 100) if account_has_data else 0
         
         # Weighted overall health score
         overall_health = (
@@ -1005,7 +1008,10 @@ def calculate_sla_compliance() -> float:
                         if hours_to_resolve <= sla.target_hours:
                             compliant += 1
         
-        return (compliant / total_checked * 100) if total_checked > 0 else 100.0
+        if total_checked > 0:
+            return (compliant / total_checked * 100)
+        else:
+            return -1.0  # -1 indicates N/A (no findings to check)
 
 def calculate_mttr() -> Dict:
     """Calculate Mean Time To Remediate by severity"""
@@ -2569,27 +2575,50 @@ if page == "🏠 Dashboard":
         """, unsafe_allow_html=True)
     
     # Calculate Evolve maturity from coverage
-    evolve_maturity = (coverage['policy_coverage']['current'] + 
-                       coverage['remediation_rate']['current'] + 
-                       coverage['account_onboarding']['current']) / 3
+    # Calculate evolve maturity only from components with valid data
+    evolve_components = []
+    if coverage['policy_coverage']['current'] >= 0:
+        evolve_components.append(coverage['policy_coverage']['current'])
+    if coverage['remediation_rate']['current'] >= 0:
+        evolve_components.append(coverage['remediation_rate']['current'])
+    if coverage['account_onboarding']['current'] >= 0:
+        evolve_components.append(coverage['account_onboarding']['current'])
+    
+    evolve_maturity = sum(evolve_components) / len(evolve_components) if evolve_components else 0
+    evolve_has_data = len(evolve_components) > 0
     with col2:
+        evolve_display = f"{evolve_maturity:.0f}%" if evolve_has_data else "N/A"
+        evolve_subtitle = "Maturity Level" if evolve_has_data else "No governance data"
         st.markdown(f"""
             <div class="metric-card">
                 <h4 style="color: #2563eb;">🔄 Evolve & Improve</h4>
-                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{evolve_maturity:.0f}%</p>
-                <p style="color: #64748b; margin: 0;">Maturity Level</p>
+                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{evolve_display}</p>
+                <p style="color: #64748b; margin: 0;">{evolve_subtitle}</p>
             </div>
         """, unsafe_allow_html=True)
     
     # Transform progress (calculated from session state)
     transform_data = st.session_state.guardrails_data.get('transform', {})
-    transform_progress = sum(v.get('implementation', v.get('deployment', v.get('integration', 50))) for v in transform_data.values()) / max(len(transform_data), 1)
+    # Calculate transform progress without arbitrary 50% default
+    if transform_data:
+        transform_values = []
+        for v in transform_data.values():
+            val = v.get('implementation') or v.get('deployment') or v.get('integration')
+            if val is not None and val > 0:
+                transform_values.append(val)
+        transform_progress = sum(transform_values) / len(transform_values) if transform_values else 0
+        transform_has_data = len(transform_values) > 0
+    else:
+        transform_progress = 0
+        transform_has_data = False
     with col3:
+        transform_display = f"{transform_progress:.0f}%" if transform_has_data else "N/A"
+        transform_subtitle = "Progress" if transform_has_data else "No AI data"
         st.markdown(f"""
             <div class="metric-card">
                 <h4 style="color: #7c3aed;">🚀 Transform</h4>
-                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{transform_progress:.0f}%</p>
-                <p style="color: #64748b; margin: 0;">Progress</p>
+                <p style="font-size: 2rem; font-weight: bold; margin: 0;">{transform_display}</p>
+                <p style="color: #64748b; margin: 0;">{transform_subtitle}</p>
             </div>
         """, unsafe_allow_html=True)
     
@@ -2679,9 +2708,9 @@ if page == "🏠 Dashboard":
         <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span style="background: #dc2626; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🔨 Build & Run: {health['overall_health']:.0f}%</span>
             <span style="color: #9ca3af; font-size: 1.2rem;">→</span>
-            <span style="background: #2563eb; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🔄 Evolve: {evolve_maturity:.0f}%</span>
+            <span style="background: #2563eb; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🔄 Evolve: {evolve_display}</span>
             <span style="color: #9ca3af; font-size: 1.2rem;">→</span>
-            <span style="background: #7c3aed; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🚀 Transform: {transform_progress:.0f}%</span>
+            <span style="background: #7c3aed; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">🚀 Transform: {transform_display}</span>
         </div>
         <p style="color: #6b7280; font-size: 0.75rem; margin-top: 0.5rem; margin-bottom: 0;">
             Start with operational excellence → Build governance maturity → Enable AI-powered transformation
