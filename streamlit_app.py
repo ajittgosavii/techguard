@@ -2342,6 +2342,9 @@ with st.sidebar:
         if new_mode != st.session_state.data_mode:
             st.session_state.data_mode = new_mode
             st.cache_data.clear()  # Clear cached data on mode change
+            # Also clear guardrails_data so it gets recalculated
+            if 'guardrails_data' in st.session_state:
+                del st.session_state.guardrails_data
             st.rerun()
     
     with col2:
@@ -2471,6 +2474,29 @@ with st.sidebar:
 if page == "🏠 Dashboard":
     st.markdown('<div class="main-header">🛡️ TechGuardrails</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Transform – Evolve – Operate | Your Co-pilot Enabling Future with Care</div>', unsafe_allow_html=True)
+    
+    # Mode indicator banner
+    if is_demo_mode():
+        st.markdown("""
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <span style="color: #d97706;">🟠 <strong>DEMO MODE</strong> - Showing sample metrics and data</span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        # Check if we have real data
+        has_data = stats['total_accounts'] > 0 or stats['total_findings'] > 0
+        if has_data:
+            st.markdown("""
+            <div style="background: #d1fae5; border: 1px solid #10b981; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="color: #059669;">🟢 <strong>LIVE MODE</strong> - Showing real AWS data</span>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="color: #d97706;">🟡 <strong>LIVE MODE</strong> - No data synced yet. Use Sync to import AWS data or switch to Demo mode.</span>
+            </div>
+            """, unsafe_allow_html=True)
     
     # Get dynamic health data
     health = get_cached_health(current_mode())
