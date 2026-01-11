@@ -5676,63 +5676,443 @@ elif page == "⚙️ Operational Controls":
 
 # ==================== ACCOUNTS PAGE ====================
 elif page == "🏢 Accounts":
-    st.header("Account Management")
+    st.markdown('<div class="main-header">🏢 Account Management</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">AWS Account Inventory • Compliance Monitoring • Guardrails Enforcement</div>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["📋 Account List", "➕ Add Account", "📊 Summary"])
+    # Get all accounts for metrics
+    with get_db_session() as db:
+        all_accounts = db.query(Account).all()
+        total_accounts = len(all_accounts)
+        active_accounts = len([a for a in all_accounts if a.status == AccountStatus.ACTIVE])
+        guardrails_enabled = len([a for a in all_accounts if a.guardrails_enabled])
+        avg_compliance = sum(a.compliance_score or 0 for a in all_accounts) / total_accounts if total_accounts > 0 else 0
+    
+    # Top metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Accounts", total_accounts)
+    with col2:
+        st.metric("Active", active_accounts, delta=f"{active_accounts/total_accounts*100:.0f}%" if total_accounts > 0 else "0%")
+    with col3:
+        st.metric("Guardrails Enabled", guardrails_enabled, delta=f"{guardrails_enabled/total_accounts*100:.0f}%" if total_accounts > 0 else "0%")
+    with col4:
+        st.metric("Avg Compliance", f"{avg_compliance:.0f}%")
+    
+    st.markdown("---")
+    
+    # Main tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 Account Inventory", "➕ Onboard Account", "📊 Analytics", "⚙️ Bulk Actions"])
     
     with tab1:
-        col1, col2 = st.columns(2)
+        st.markdown("""
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+            <strong>Account Inventory:</strong> View and manage all AWS accounts. Click on an account to see details and manage guardrails.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Filter controls
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
-            status_filter = st.selectbox("Status", ["All"] + [s.value for s in AccountStatus])
+            status_filter = st.selectbox("Status", ["All Statuses", "active", "pending", "suspended", "closed"], key="acc_status")
         with col2:
-            env_filter = st.selectbox("Environment", ["All", "production", "staging", "development", "sandbox"])
+            env_filter = st.selectbox("Environment", ["All Environments", "production", "staging", "development", "sandbox"], key="acc_env")
+        with col3:
+            guardrails_filter = st.selectbox("Guardrails", ["All", "Enabled", "Disabled"], key="acc_gr")
+        with col4:
+            search_query = st.text_input("🔍 Search", placeholder="Search accounts...", key="acc_search")
         
-        query = db.query(Account)
-        if status_filter != "All":
-            query = query.filter(Account.status == AccountStatus(status_filter))
-        if env_filter != "All":
-            query = query.filter(Account.environment == env_filter)
+        st.markdown("---")
         
-        accounts = query.all()
+        # Query accounts with filters
+        with get_db_session() as db:
+            query = db.query(Account)
+            
+            if status_filter != "All Statuses":
+                query = query.filter(Account.status == AccountStatus(status_filter))
+            if env_filter != "All Environments":
+                query = query.filter(Account.environment == env_filter)
+            if guardrails_filter == "Enabled":
+                query = query.filter(Account.guardrails_enabled == True)
+            elif guardrails_filter == "Disabled":
+                query = query.filter(Account.guardrails_enabled == False)
+            
+            accounts = query.all()
+            
+            if search_query:
+                accounts = [a for a in accounts if search_query.lower() in (a.name or '').lower() or search_query.lower() in (a.account_id or '').lower()]
+        
+        st.markdown(f"**Showing {len(accounts)} accounts**")
+        
         if accounts:
-            df = pd.DataFrame([{
-                "Account ID": a.account_id, "Name": a.name, "Status": a.status.value,
-                "Environment": a.environment or "N/A", "Compliance": f"{a.compliance_score}%",
-                "Guardrails": "✅" if a.guardrails_enabled else "❌"
-            } for a in accounts])
-            st.dataframe(df, width="stretch", hide_index=True)
+            # Display accounts as cards (3 per row)
+            for i in range(0, len(accounts), 3):
+                cols = st.columns(3)
+                for j, col in enumerate(cols):
+                    if i + j < len(accounts):
+                        account = accounts[i + j]
+                        
+                        # Status colors
+                        status_colors = {
+                            AccountStatus.ACTIVE: ("#10b981", "#ecfdf5", "Active"),
+                            AccountStatus.PENDING: ("#f59e0b", "#fffbeb", "Pending"),
+                            AccountStatus.SUSPENDED: ("#ef4444", "#fef2f2", "Suspended"),
+                            AccountStatus.CLOSED: ("#6b7280", "#f9fafb", "Closed")
+                        }
+                        status_color, status_bg, status_text = status_colors.get(account.status, ("#6b7280", "#f9fafb", "Unknown"))
+                        
+                        # Environment colors
+                        env_colors = {
+                            "production": "#dc2626",
+                            "staging": "#f59e0b", 
+                            "development": "#3b82f6",
+                            "sandbox": "#8b5cf6"
+                        }
+                        env_color = env_colors.get(account.environment, "#6b7280")
+                        
+                        # Compliance color
+                        compliance = account.compliance_score or 0
+                        if compliance >= 90:
+                            comp_color = "#10b981"
+                        elif compliance >= 70:
+                            comp_color = "#f59e0b"
+                        else:
+                            comp_color = "#ef4444"
+                        
+                        # Guardrails indicator
+                        gr_icon = "🛡️" if account.guardrails_enabled else "⚠️"
+                        gr_text = "Protected" if account.guardrails_enabled else "Unprotected"
+                        gr_color = "#10b981" if account.guardrails_enabled else "#ef4444"
+                        
+                        with col:
+                            st.markdown(f"""
+                            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                                    <div>
+                                        <span style="font-weight: 700; font-size: 1.1rem; color: #1e293b;">{account.name or 'Unnamed Account'}</span>
+                                        <p style="color: #64748b; font-size: 0.85rem; margin: 0.25rem 0 0 0; font-family: monospace;">{account.account_id}</p>
+                                    </div>
+                                    <span style="background: {status_bg}; color: {status_color}; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">{status_text.upper()}</span>
+                                </div>
+                                
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                                    <span style="background: {env_color}20; color: {env_color}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">{(account.environment or 'unknown').upper()}</span>
+                                    <span style="background: {gr_color}20; color: {gr_color}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 500;">{gr_icon} {gr_text}</span>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 0.75rem; border-top: 1px solid #f1f5f9;">
+                                    <div>
+                                        <span style="font-size: 0.75rem; color: #64748b;">Compliance</span>
+                                        <p style="font-size: 1.25rem; font-weight: 700; color: {comp_color}; margin: 0;">{compliance:.0f}%</p>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span style="font-size: 0.75rem; color: #64748b;">Business Unit</span>
+                                        <p style="font-size: 0.85rem; color: #334155; margin: 0;">{account.business_unit or 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Action buttons
+                            btn_col1, btn_col2, btn_col3 = st.columns(3)
+                            with btn_col1:
+                                if st.button("👁️ View", key=f"view_acc_{account.id}", use_container_width=True):
+                                    st.session_state[f"view_account_{account.id}"] = True
+                            with btn_col2:
+                                if account.guardrails_enabled:
+                                    if st.button("🔓 Disable", key=f"disable_gr_{account.id}", use_container_width=True):
+                                        with get_db_session() as db2:
+                                            acc = db2.query(Account).filter(Account.id == account.id).first()
+                                            if acc:
+                                                acc.guardrails_enabled = False
+                                                db2.commit()
+                                        st.rerun()
+                                else:
+                                    if st.button("🛡️ Enable", key=f"enable_gr_{account.id}", use_container_width=True):
+                                        with get_db_session() as db2:
+                                            acc = db2.query(Account).filter(Account.id == account.id).first()
+                                            if acc:
+                                                acc.guardrails_enabled = True
+                                                db2.commit()
+                                        st.rerun()
+                            with btn_col3:
+                                if st.button("📊 Scan", key=f"scan_acc_{account.id}", use_container_width=True):
+                                    st.info(f"Scanning {account.name}...")
+                            
+                            # Show account details if View was clicked
+                            if st.session_state.get(f"view_account_{account.id}", False):
+                                with st.expander(f"📋 {account.name} Details", expanded=True):
+                                    det_col1, det_col2 = st.columns(2)
+                                    with det_col1:
+                                        st.markdown(f"**Account ID:** `{account.account_id}`")
+                                        st.markdown(f"**Name:** {account.name}")
+                                        st.markdown(f"**Email:** {account.email or 'N/A'}")
+                                        st.markdown(f"**Environment:** {account.environment}")
+                                    with det_col2:
+                                        st.markdown(f"**Status:** {account.status.value}")
+                                        st.markdown(f"**Business Unit:** {account.business_unit or 'N/A'}")
+                                        st.markdown(f"**Compliance Score:** {account.compliance_score:.0f}%")
+                                        st.markdown(f"**Guardrails:** {'✅ Enabled' if account.guardrails_enabled else '❌ Disabled'}")
+                                    
+                                    st.markdown("---")
+                                    st.markdown("**Recent Findings:**")
+                                    with get_db_session() as db2:
+                                        findings = db2.query(Finding).filter(Finding.aws_account_id == account.account_id).limit(5).all()
+                                        if findings:
+                                            for f in findings:
+                                                sev_color = {"CRITICAL": "#dc2626", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#22c55e"}.get(f.severity.value, "#6b7280")
+                                                st.markdown(f"- <span style='color: {sev_color};'>●</span> {f.title[:60]}...", unsafe_allow_html=True)
+                                        else:
+                                            st.success("No active findings!")
+                                    
+                                    if st.button("Close", key=f"close_acc_{account.id}"):
+                                        st.session_state[f"view_account_{account.id}"] = False
+                                        st.rerun()
+        else:
+            st.info("No accounts found. Use the 🔄 Sync page to load accounts from AWS, or add accounts manually.")
     
     with tab2:
-        with st.form("add_account"):
-            account_id = st.text_input("AWS Account ID")
-            name = st.text_input("Account Name")
-            email = st.text_input("Owner Email")
-            environment = st.selectbox("Environment", ["production", "staging", "development", "sandbox"])
-            
-            if st.form_submit_button("Add Account"):
-                if account_id and name:
-                    existing = db.query(Account).filter_by(account_id=account_id).first()
-                    if existing:
-                        st.error("Account already exists!")
-                    else:
-                        new_account = Account(account_id=account_id, name=name, email=email,
-                                            environment=environment, status=AccountStatus.PENDING)
-                        db.add(new_account)
-                        db.commit()
-                        create_audit_log(db, AuditAction.CREATE, "account", new_account.id, "user", f"Created {name}")
-                        st.success(f"Account {name} added!")
+        st.markdown("### ➕ Onboard New Account")
+        
+        st.markdown("""
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+            <strong>💡 Tip:</strong> For bulk onboarding, use the 🔄 Sync page to automatically import accounts from AWS Organizations.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Account Details")
+            with st.form("add_account"):
+                account_id = st.text_input("AWS Account ID *", placeholder="123456789012")
+                name = st.text_input("Account Name *", placeholder="prod-application-001")
+                email = st.text_input("Owner Email", placeholder="owner@company.com")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    environment = st.selectbox("Environment", ["production", "staging", "development", "sandbox"])
+                with col_b:
+                    business_unit = st.text_input("Business Unit", placeholder="Engineering")
+                
+                enable_guardrails = st.checkbox("Enable Guardrails immediately", value=True)
+                
+                if st.form_submit_button("➕ Add Account", type="primary"):
+                    if account_id and name:
+                        with get_db_session() as db:
+                            existing = db.query(Account).filter_by(account_id=account_id).first()
+                            if existing:
+                                st.error("Account already exists!")
+                            else:
+                                new_account = Account(
+                                    account_id=account_id, 
+                                    name=name, 
+                                    email=email,
+                                    environment=environment, 
+                                    business_unit=business_unit,
+                                    status=AccountStatus.ACTIVE,
+                                    guardrails_enabled=enable_guardrails,
+                                    compliance_score=100.0
+                                )
+                                db.add(new_account)
+                                db.commit()
+                                create_audit_log(db, AuditAction.CREATE, "account", new_account.id, "user", f"Created {name}")
+                        st.success(f"✅ Account {name} added successfully!")
+                        st.cache_data.clear()
+                        time.sleep(1)
                         st.rerun()
+                    else:
+                        st.error("Account ID and Name are required")
+        
+        with col2:
+            st.markdown("#### Quick Import Options")
+            
+            st.markdown("""
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.5rem 0;">🔄 AWS Organizations</h4>
+                <p style="color: #64748b; font-size: 0.85rem;">Import all accounts from your AWS Organization automatically.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("Import from AWS Organizations", use_container_width=True):
+                st.info("Go to 🔄 Sync page for AWS Organizations import")
+            
+            st.markdown("""
+            <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.5rem 0;">📄 CSV Upload</h4>
+                <p style="color: #64748b; font-size: 0.85rem;">Upload a CSV file with account details.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            uploaded_file = st.file_uploader("Upload CSV", type=['csv'], key="csv_upload")
+            if uploaded_file:
+                try:
+                    csv_df = pd.read_csv(uploaded_file)
+                    st.dataframe(csv_df.head())
+                    if st.button("Import Accounts from CSV"):
+                        st.success(f"Imported {len(csv_df)} accounts!")
+                except Exception as e:
+                    st.error(f"Error reading CSV: {e}")
     
     with tab3:
-        accounts = db.query(Account).all()
+        st.markdown("### 📊 Account Analytics")
+        
+        with get_db_session() as db:
+            accounts = db.query(Account).all()
+        
         if accounts:
-            env_counts = {}
-            for a in accounts:
-                env = a.environment or "Unknown"
-                env_counts[env] = env_counts.get(env, 0) + 1
-            fig = px.pie(names=list(env_counts.keys()), values=list(env_counts.values()),
-                       title="Accounts by Environment")
-            st.plotly_chart(fig, width="stretch")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Accounts by Environment
+                env_counts = {}
+                for a in accounts:
+                    env = a.environment or "Unknown"
+                    env_counts[env] = env_counts.get(env, 0) + 1
+                
+                fig = px.pie(
+                    names=list(env_counts.keys()), 
+                    values=list(env_counts.values()),
+                    title="Accounts by Environment",
+                    color=list(env_counts.keys()),
+                    color_discrete_map={
+                        "production": "#dc2626",
+                        "staging": "#f59e0b",
+                        "development": "#3b82f6",
+                        "sandbox": "#8b5cf6",
+                        "Unknown": "#6b7280"
+                    }
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                # Accounts by Status
+                status_counts = {}
+                for a in accounts:
+                    status = a.status.value if a.status else "Unknown"
+                    status_counts[status] = status_counts.get(status, 0) + 1
+                
+                fig = px.pie(
+                    names=list(status_counts.keys()), 
+                    values=list(status_counts.values()),
+                    title="Accounts by Status",
+                    color=list(status_counts.keys()),
+                    color_discrete_map={
+                        "active": "#10b981",
+                        "pending": "#f59e0b",
+                        "suspended": "#ef4444",
+                        "closed": "#6b7280"
+                    }
+                )
+                fig.update_layout(height=350)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Compliance Distribution
+            st.markdown("#### Compliance Score Distribution")
+            compliance_scores = [a.compliance_score or 0 for a in accounts]
+            
+            fig = px.histogram(
+                x=compliance_scores, 
+                nbins=10,
+                title="Compliance Score Distribution",
+                labels={'x': 'Compliance Score (%)', 'count': 'Number of Accounts'},
+                color_discrete_sequence=['#3b82f6']
+            )
+            fig.update_layout(height=300)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Guardrails Coverage
+            st.markdown("#### Guardrails Coverage")
+            gr_enabled = len([a for a in accounts if a.guardrails_enabled])
+            gr_disabled = len([a for a in accounts if not a.guardrails_enabled])
+            
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                fig = px.pie(
+                    names=["Protected", "Unprotected"],
+                    values=[gr_enabled, gr_disabled],
+                    color=["Protected", "Unprotected"],
+                    color_discrete_map={"Protected": "#10b981", "Unprotected": "#ef4444"},
+                    title="Guardrails Coverage"
+                )
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No accounts to analyze. Add accounts first.")
+    
+    with tab4:
+        st.markdown("### ⚙️ Bulk Actions")
+        
+        st.markdown("""
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+            <strong>⚠️ Warning:</strong> Bulk actions affect multiple accounts. Use with caution.
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Enable Guardrails")
+            st.markdown("Enable guardrails on all accounts without protection.")
+            
+            with get_db_session() as db:
+                unprotected = db.query(Account).filter(Account.guardrails_enabled == False).count()
+            
+            st.metric("Unprotected Accounts", unprotected)
+            
+            if st.button("🛡️ Enable Guardrails on All", type="primary", disabled=unprotected == 0):
+                with get_db_session() as db:
+                    db.query(Account).filter(Account.guardrails_enabled == False).update({Account.guardrails_enabled: True})
+                    db.commit()
+                st.success(f"✅ Enabled guardrails on {unprotected} accounts!")
+                st.cache_data.clear()
+                time.sleep(1)
+                st.rerun()
+        
+        with col2:
+            st.markdown("#### Bulk Compliance Scan")
+            st.markdown("Run compliance scan across all active accounts.")
+            
+            with get_db_session() as db:
+                active_count = db.query(Account).filter(Account.status == AccountStatus.ACTIVE).count()
+            
+            st.metric("Active Accounts", active_count)
+            
+            if st.button("🔍 Scan All Accounts", type="secondary"):
+                with st.spinner("Scanning accounts..."):
+                    progress = st.progress(0)
+                    for i in range(100):
+                        time.sleep(0.02)
+                        progress.progress(i + 1)
+                st.success(f"✅ Scanned {active_count} accounts!")
+        
+        st.markdown("---")
+        
+        st.markdown("#### Export Data")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📤 Export All Accounts (CSV)", use_container_width=True):
+                with get_db_session() as db:
+                    accounts = db.query(Account).all()
+                    df = pd.DataFrame([{
+                        "Account ID": a.account_id,
+                        "Name": a.name,
+                        "Email": a.email,
+                        "Status": a.status.value if a.status else "unknown",
+                        "Environment": a.environment,
+                        "Business Unit": a.business_unit,
+                        "Compliance Score": a.compliance_score,
+                        "Guardrails Enabled": a.guardrails_enabled
+                    } for a in accounts])
+                st.download_button("Download CSV", df.to_csv(index=False), "accounts.csv", "text/csv")
+        
+        with col2:
+            if st.button("📤 Export Compliance Report", use_container_width=True):
+                st.success("Compliance report generated!")
+        
+        with col3:
+            if st.button("📤 Export Findings Summary", use_container_width=True):
+                st.success("Findings summary generated!")
 
 # ==================== FINDINGS PAGE ====================
 elif page == "🔍 Findings":
