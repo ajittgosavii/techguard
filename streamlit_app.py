@@ -5713,7 +5713,7 @@ elif page == "🏢 Accounts":
         # Filter controls
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            status_filter = st.selectbox("Status", ["All Statuses", "active", "pending", "suspended", "closed"], key="acc_status")
+            status_filter = st.selectbox("Status", ["All Statuses", "ACTIVE", "PENDING", "ONBOARDING", "SUSPENDED"], key="acc_status")
         with col2:
             env_filter = st.selectbox("Environment", ["All Environments", "production", "staging", "development", "sandbox"], key="acc_env")
         with col3:
@@ -5755,8 +5755,8 @@ elif page == "🏢 Accounts":
                         status_colors = {
                             AccountStatus.ACTIVE: ("#10b981", "#ecfdf5", "Active"),
                             AccountStatus.PENDING: ("#f59e0b", "#fffbeb", "Pending"),
-                            AccountStatus.SUSPENDED: ("#ef4444", "#fef2f2", "Suspended"),
-                            AccountStatus.CLOSED: ("#6b7280", "#f9fafb", "Closed")
+                            AccountStatus.ONBOARDING: ("#3b82f6", "#eff6ff", "Onboarding"),
+                            AccountStatus.SUSPENDED: ("#ef4444", "#fef2f2", "Suspended")
                         }
                         status_color, status_bg, status_text = status_colors.get(account.status, ("#6b7280", "#f9fafb", "Unknown"))
                         
@@ -5997,10 +5997,10 @@ elif page == "🏢 Accounts":
                     title="Accounts by Status",
                     color=list(status_counts.keys()),
                     color_discrete_map={
-                        "active": "#10b981",
-                        "pending": "#f59e0b",
-                        "suspended": "#ef4444",
-                        "closed": "#6b7280"
+                        "ACTIVE": "#10b981",
+                        "PENDING": "#f59e0b",
+                        "ONBOARDING": "#3b82f6",
+                        "SUSPENDED": "#ef4444"
                     }
                 )
                 fig.update_layout(height=350)
