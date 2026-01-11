@@ -3909,246 +3909,322 @@ elif page == "💰 FinOps Center":
     st.markdown('<div class="main-header">💰 FinOps Center</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Cloud Financial Operations - Cost Visibility, Optimization & Governance</div>', unsafe_allow_html=True)
     
-    # Mode indicator
-    mode_text = "🟠 DEMO MODE" if is_demo_mode() else "🟢 LIVE MODE"
-    st.caption(f"Data Source: {mode_text}")
+    # Mode indicator with clear data source
+    if is_demo_mode():
+        st.markdown("""
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <span style="color: #d97706;">🟠 <strong>DEMO MODE</strong> - Showing sample FinOps data</span>
+        </div>
+        """, unsafe_allow_html=True)
+        finops_data = generate_finops_demo_data()
+        savings_data = generate_savings_demo_data()
+        budget_data = generate_budget_demo_data()
+        anomaly_data = generate_anomaly_demo_data()
+    else:
+        # Live Mode - check AWS Cost Explorer connection
+        clients = st.session_state.get('aws_clients', {})
+        ce_client = clients.get('ce')
+        
+        if ce_client:
+            st.markdown("""
+            <div style="background: #d1fae5; border: 1px solid #10b981; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="color: #059669;">🟢 <strong>LIVE MODE</strong> - Connected to AWS Cost Explorer</span>
+            </div>
+            """, unsafe_allow_html=True)
+            live_data = fetch_live_cost_data()
+            finops_data = live_data if live_data else {"total_mtd": 0, "forecasted_month": 0, "change_percent": 0, "monthly_costs": [], "service_costs": [], "top_accounts": []}
+        else:
+            st.markdown("""
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 0.5rem 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                <span style="color: #d97706;">🟡 <strong>LIVE MODE</strong> - AWS Cost Explorer not connected</span>
+            </div>
+            """, unsafe_allow_html=True)
+            finops_data = {"total_mtd": 0, "forecasted_month": 0, "change_percent": 0, "monthly_costs": [], "service_costs": [], "top_accounts": []}
+        
+        # No live data fetchers for savings/budget/anomaly yet
+        savings_data = {"total_potential_savings": 0, "implemented_savings": 0, "recommendations": [], "by_category": {}}
+        budget_data = {"total_budget": 0, "total_spend": 0, "total_forecast": 0, "budgets": [], "alerts": []}
+        anomaly_data = {"anomalies": [], "total_impact": 0, "resolved_this_month": 0}
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Cost Overview", "💡 Savings Opportunities", "📋 Budgets", "🔍 Anomalies", "🤖 AI FinOps Advisor"])
     
     with tab1:
         st.subheader("Cost Overview")
         
-        finops_data = get_finops_data()
+        # Show info message in Live mode with no data
+        if not is_demo_mode() and finops_data.get('total_mtd', 0) == 0:
+            st.info("""
+            📊 **No cost data available in Live mode**
+            
+            To see real AWS cost data:
+            1. Configure AWS credentials in **Settings → AWS Configuration**
+            2. Enable Cost Explorer in your AWS account
+            3. Grant `ce:GetCostAndUsage` permissions to your IAM role
+            
+            **💡 Tip:** Switch to Demo mode in the sidebar to see sample data.
+            """)
         
         # Top metrics
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric(
-                "Month-to-Date Spend",
-                f"${finops_data['total_mtd']:,.0f}",
-                delta=f"{finops_data.get('change_percent', 0):+.1f}% vs last month"
-            )
+            if finops_data.get('total_mtd', 0) > 0:
+                st.metric(
+                    "Month-to-Date Spend",
+                    f"${finops_data['total_mtd']:,.0f}",
+                    delta=f"{finops_data.get('change_percent', 0):+.1f}% vs last month"
+                )
+            else:
+                st.metric("Month-to-Date Spend", "N/A" if not is_demo_mode() else "$0")
         
         with col2:
-            st.metric(
-                "Forecasted Month End",
-                f"${finops_data.get('forecasted_month', 0):,.0f}",
-                delta=f"${finops_data.get('forecasted_month', 0) - finops_data['total_mtd']:,.0f} remaining"
-            )
+            if finops_data.get('forecasted_month', 0) > 0:
+                st.metric(
+                    "Forecasted Month End",
+                    f"${finops_data.get('forecasted_month', 0):,.0f}",
+                    delta=f"${finops_data.get('forecasted_month', 0) - finops_data.get('total_mtd', 0):,.0f} remaining"
+                )
+            else:
+                st.metric("Forecasted Month End", "N/A" if not is_demo_mode() else "$0")
         
         with col3:
-            savings_data = get_savings_data()
-            st.metric(
-                "Potential Savings",
-                f"${savings_data['total_potential_savings']:,.0f}",
-                delta=f"-{savings_data['total_potential_savings'] / finops_data['total_mtd'] * 100:.1f}% of spend"
-            )
+            if savings_data.get('total_potential_savings', 0) > 0:
+                st.metric(
+                    "Potential Savings",
+                    f"${savings_data['total_potential_savings']:,.0f}",
+                    delta=f"-{savings_data['total_potential_savings'] / max(finops_data.get('total_mtd', 1), 1) * 100:.1f}% of spend"
+                )
+            else:
+                st.metric("Potential Savings", "N/A" if not is_demo_mode() else "$0")
         
         with col4:
-            budget_data = get_budget_data()
-            budget_health = (budget_data['total_spend'] / budget_data['total_budget']) * 100
-            st.metric(
-                "Budget Utilization",
-                f"{budget_health:.1f}%",
-                delta=f"${budget_data['total_budget'] - budget_data['total_spend']:,.0f} remaining"
-            )
+            if budget_data.get('total_budget', 0) > 0:
+                budget_health = (budget_data.get('total_spend', 0) / budget_data['total_budget']) * 100
+                st.metric(
+                    "Budget Utilization",
+                    f"{budget_health:.1f}%",
+                    delta=f"${budget_data['total_budget'] - budget_data.get('total_spend', 0):,.0f} remaining"
+                )
+            else:
+                st.metric("Budget Utilization", "N/A" if not is_demo_mode() else "0%")
         
-        st.markdown("---")
-        
-        # Cost charts
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### Monthly Cost Trend")
-            monthly_df = pd.DataFrame(finops_data['monthly_costs'])
-            fig = px.bar(monthly_df, x='month', y='cost', 
-                        title='Monthly Cloud Spend',
-                        color_discrete_sequence=['#3b82f6'])
-            fig.update_layout(height=350, xaxis_title="", yaxis_title="Cost ($)")
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("#### Cost by Service")
-            service_df = pd.DataFrame(finops_data['service_costs'])
-            fig = px.pie(service_df, values='cost', names='service',
-                        title='Cost Distribution by Service',
-                        color_discrete_sequence=px.colors.qualitative.Set3)
-            fig.update_layout(height=350)
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # Top accounts
-        st.markdown("#### Top Spending Accounts")
-        if finops_data.get('top_accounts'):
-            accounts_df = pd.DataFrame(finops_data['top_accounts'])
-            accounts_df['percent'] = (accounts_df['cost'] / accounts_df['cost'].sum() * 100).round(1)
+        # Only show charts if we have data
+        if finops_data.get('total_mtd', 0) > 0:
+            st.markdown("---")
             
-            fig = px.bar(accounts_df, x='name', y='cost', 
-                        color='cost', color_continuous_scale='Blues',
-                        title='Cost by Account')
-            fig.update_layout(height=300)
-            st.plotly_chart(fig, use_container_width=True)
+            # Cost charts
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Monthly Cost Trend")
+                if finops_data.get('monthly_costs'):
+                    monthly_df = pd.DataFrame(finops_data['monthly_costs'])
+                    fig = px.bar(monthly_df, x='month', y='cost', 
+                                title='Monthly Cloud Spend',
+                                color_discrete_sequence=['#3b82f6'])
+                    fig.update_layout(height=350, xaxis_title="", yaxis_title="Cost ($)")
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No monthly cost data available")
+            
+            with col2:
+                st.markdown("#### Cost by Service")
+                if finops_data.get('service_costs'):
+                    service_df = pd.DataFrame(finops_data['service_costs'])
+                    fig = px.pie(service_df, values='cost', names='service',
+                                title='Cost Distribution by Service',
+                                color_discrete_sequence=px.colors.qualitative.Set3)
+                    fig.update_layout(height=350)
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("No service cost data available")
+            
+            # Top accounts
+            st.markdown("#### Top Spending Accounts")
+            if finops_data.get('top_accounts'):
+                accounts_df = pd.DataFrame(finops_data['top_accounts'])
+                accounts_df['percent'] = (accounts_df['cost'] / accounts_df['cost'].sum() * 100).round(1)
+                
+                fig = px.bar(accounts_df, x='name', y='cost', 
+                            color='cost', color_continuous_scale='Blues',
+                            title='Cost by Account')
+                fig.update_layout(height=300)
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No account cost data available")
     
     with tab2:
         st.subheader("💡 Savings Opportunities")
         
-        savings_data = get_savings_data()
-        
-        # Summary cards
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1.5rem; border-radius: 12px; color: white;">
-                <h3 style="margin: 0; color: white;">Total Potential Savings</h3>
-                <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">${savings_data['total_potential_savings']:,}</p>
-                <p style="margin: 0; opacity: 0.9; color: white;">Per month</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1.5rem; border-radius: 12px; color: white;">
-                <h3 style="margin: 0; color: white;">Already Implemented</h3>
-                <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">${savings_data['implemented_savings']:,}</p>
-                <p style="margin: 0; opacity: 0.9; color: white;">Realized savings</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 1.5rem; border-radius: 12px; color: white;">
-                <h3 style="margin: 0; color: white;">Recommendations</h3>
-                <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">{len(savings_data['recommendations'])}</p>
-                <p style="margin: 0; opacity: 0.9; color: white;">Action items</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("---")
-        
-        # Savings by category chart
-        col1, col2 = st.columns([1, 2])
-        
-        with col1:
-            st.markdown("#### Savings by Category")
-            cat_df = pd.DataFrame([
-                {"category": k, "savings": v} 
-                for k, v in savings_data['by_category'].items()
-            ])
-            fig = px.pie(cat_df, values='savings', names='category',
-                        color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_layout(height=300)
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("#### Recommendations")
-            for rec in savings_data['recommendations']:
-                effort_color = {"low": "#10b981", "medium": "#f59e0b", "high": "#ef4444"}.get(rec['effort'], "#6b7280")
+        # savings_data is already set at page level based on mode
+        if not is_demo_mode() and savings_data.get('total_potential_savings', 0) == 0:
+            st.info("""
+            📊 **Savings analysis not available in Live mode**
+            
+            AWS Cost Explorer Recommendations API is required for live savings data.
+            Switch to Demo mode in the sidebar to see sample savings recommendations.
+            """)
+        else:
+            # Summary cards
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                    <h3 style="margin: 0; color: white;">Total Potential Savings</h3>
+                    <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">${savings_data.get('total_potential_savings', 0):,}</p>
+                    <p style="margin: 0; opacity: 0.9; color: white;">Per month</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                    <h3 style="margin: 0; color: white;">Already Implemented</h3>
+                    <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">${savings_data.get('implemented_savings', 0):,}</p>
+                    <p style="margin: 0; opacity: 0.9; color: white;">Realized savings</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+                    <h3 style="margin: 0; color: white;">Recommendations</h3>
+                    <p style="font-size: 2.5rem; font-weight: bold; margin: 0.5rem 0; color: white;">{len(savings_data.get('recommendations', []))}</p>
+                    <p style="margin: 0; opacity: 0.9; color: white;">Action items</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            if savings_data.get('by_category') and savings_data.get('recommendations'):
+                # Savings by category chart
+                col1, col2 = st.columns([1, 2])
                 
-                with st.expander(f"💡 {rec['type']} - Save ${rec['potential_savings']:,}/mo"):
-                    st.markdown(f"**Resource:** {rec['resource']}")
-                    st.markdown(f"**Current Cost:** ${rec['current_cost']:,}/month")
-                    st.markdown(f"**Potential Savings:** ${rec['potential_savings']:,}/month ({rec['potential_savings']/rec['current_cost']*100:.0f}%)")
-                    st.markdown(f"**Implementation Effort:** <span style='color: {effort_color}; font-weight: bold;'>{rec['effort'].upper()}</span>", unsafe_allow_html=True)
-                    st.markdown(f"**Description:** {rec['description']}")
-                    
-                    if st.button(f"Implement Recommendation", key=f"impl_{rec['type']}"):
-                        st.success("✅ Recommendation marked for implementation!")
+                with col1:
+                    st.markdown("#### Savings by Category")
+                    cat_df = pd.DataFrame([
+                        {"category": k, "savings": v} 
+                        for k, v in savings_data['by_category'].items()
+                    ])
+                    fig = px.pie(cat_df, values='savings', names='category',
+                                color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig.update_layout(height=300)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    st.markdown("#### Recommendations")
+                    for rec in savings_data['recommendations']:
+                        effort_color = {"low": "#10b981", "medium": "#f59e0b", "high": "#ef4444"}.get(rec['effort'], "#6b7280")
+                        
+                        with st.expander(f"💡 {rec['type']} - Save ${rec['potential_savings']:,}/mo"):
+                            st.markdown(f"**Resource:** {rec['resource']}")
+                            st.markdown(f"**Current Cost:** ${rec['current_cost']:,}/month")
+                            st.markdown(f"**Potential Savings:** ${rec['potential_savings']:,}/month ({rec['potential_savings']/rec['current_cost']*100:.0f}%)")
+                            st.markdown(f"**Implementation Effort:** <span style='color: {effort_color}; font-weight: bold;'>{rec['effort'].upper()}</span>", unsafe_allow_html=True)
+                            st.markdown(f"**Description:** {rec['description']}")
+                            
+                            if st.button(f"Implement Recommendation", key=f"impl_{rec['type']}"):
+                                st.success("✅ Recommendation marked for implementation!")
     
     with tab3:
         st.subheader("📋 Budget Management")
         
-        budget_data = get_budget_data()
-        
-        # Budget overview
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Budget", f"${budget_data['total_budget']:,}")
-        with col2:
-            st.metric("Current Spend", f"${budget_data['total_spend']:,}")
-        with col3:
-            st.metric("Forecasted", f"${budget_data['total_forecast']:,}")
-        
-        st.markdown("---")
-        
-        # Budget status
-        st.markdown("#### Budget Status")
-        
-        for budget in budget_data['budgets']:
-            status_color = {"healthy": "#10b981", "warning": "#f59e0b", "critical": "#ef4444"}.get(budget['status'], "#6b7280")
-            
-            col1, col2, col3 = st.columns([3, 1, 1])
+        # budget_data is already set at page level based on mode
+        if not is_demo_mode() and budget_data.get('total_budget', 0) == 0:
+            st.info("📊 **Budget data not available in Live mode**\n\nAWS Budgets API integration is required for live budget data.\nSwitch to Demo mode in the sidebar to see sample budget management.")
+        else:
+            # Budget overview
+            col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.markdown(f"**{budget['name']}**")
-                progress = budget['percent_used'] / 100
-                st.progress(min(progress, 1.0))
-                st.caption(f"${budget['current']:,} of ${budget['amount']:,} ({budget['percent_used']:.1f}%)")
-            
+                st.metric("Total Budget", f"${budget_data['total_budget']:,}")
             with col2:
-                st.markdown(f"<span style='color: {status_color}; font-weight: bold;'>{budget['status'].upper()}</span>", unsafe_allow_html=True)
-            
+                st.metric("Current Spend", f"${budget_data['total_spend']:,}")
             with col3:
-                st.markdown(f"Forecast: ${budget['forecast']:,}")
-        
-        # Budget alerts
-        if budget_data['alerts']:
+                st.metric("Forecasted", f"${budget_data.get('total_forecast', 0):,}")
+            
             st.markdown("---")
-            st.markdown("#### ⚠️ Budget Alerts")
-            for alert in budget_data['alerts']:
-                st.warning(f"**{alert['name']}** is at {alert['percent_used']:.1f}% of budget")
+            
+            # Budget status
+            st.markdown("#### Budget Status")
+            
+            for budget in budget_data.get('budgets', []):
+                status_color = {"healthy": "#10b981", "warning": "#f59e0b", "critical": "#ef4444"}.get(budget['status'], "#6b7280")
+                
+                col1, col2, col3 = st.columns([3, 1, 1])
+                
+                with col1:
+                    st.markdown(f"**{budget['name']}**")
+                    progress = budget['percent_used'] / 100
+                    st.progress(min(progress, 1.0))
+                    st.caption(f"${budget['current']:,} of ${budget['amount']:,} ({budget['percent_used']:.1f}%)")
+                
+                with col2:
+                    st.markdown(f"<span style='color: {status_color}; font-weight: bold;'>{budget['status'].upper()}</span>", unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown(f"Forecast: ${budget['forecast']:,}")
+            
+            # Budget alerts
+            if budget_data.get('alerts'):
+                st.markdown("---")
+                st.markdown("#### ⚠️ Budget Alerts")
+                for alert in budget_data['alerts']:
+                    st.warning(f"**{alert['name']}** is at {alert['percent_used']:.1f}% of budget")
     
     with tab4:
         st.subheader("🔍 Cost Anomaly Detection")
         
-        anomaly_data = get_anomaly_data()
-        
-        # Summary
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Active Anomalies", len(anomaly_data['anomalies']))
-        with col2:
-            st.metric("Total Impact", f"${anomaly_data['total_impact']:,}")
-        with col3:
-            st.metric("Resolved This Month", anomaly_data['resolved_this_month'])
-        
-        st.markdown("---")
-        
-        # Anomaly list
-        st.markdown("#### Detected Anomalies")
-        
-        for anomaly in anomaly_data['anomalies']:
-            severity_color = {"low": "#10b981", "medium": "#f59e0b", "high": "#ef4444", "critical": "#dc2626"}.get(anomaly['severity'], "#6b7280")
+        # anomaly_data is already set at page level based on mode
+        if not is_demo_mode() and len(anomaly_data.get('anomalies', [])) == 0:
+            st.info("📊 **Anomaly detection not available in Live mode**\n\nAWS Cost Anomaly Detection API is required for live anomaly data.\nSwitch to Demo mode in the sidebar to see sample anomaly detection.")
+        else:
+            # Summary
+            col1, col2, col3 = st.columns(3)
             
-            with st.expander(f"🔴 {anomaly['service']} - {anomaly['account']} (+{anomaly['deviation']:.1f}%)"):
-                col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Active Anomalies", len(anomaly_data.get('anomalies', [])))
+            with col2:
+                st.metric("Total Impact", f"${anomaly_data.get('total_impact', 0):,}")
+            with col3:
+                st.metric("Resolved This Month", anomaly_data.get('resolved_this_month', 0))
+            
+            st.markdown("---")
+            
+            # Anomaly list
+            st.markdown("#### Detected Anomalies")
+            
+            for anomaly in anomaly_data.get('anomalies', []):
+                severity_color = {"low": "#10b981", "medium": "#f59e0b", "high": "#ef4444", "critical": "#dc2626"}.get(anomaly['severity'], "#6b7280")
                 
-                with col1:
-                    st.markdown(f"**Anomaly ID:** {anomaly['id']}")
-                    st.markdown(f"**Service:** {anomaly['service']}")
-                    st.markdown(f"**Account:** {anomaly['account']}")
-                    st.markdown(f"**Severity:** <span style='color: {severity_color}; font-weight: bold;'>{anomaly['severity'].upper()}</span>", unsafe_allow_html=True)
-                
-                with col2:
-                    st.markdown(f"**Expected Cost:** ${anomaly['expected']:,}")
-                    st.markdown(f"**Actual Cost:** ${anomaly['actual']:,}")
-                    st.markdown(f"**Deviation:** +{anomaly['deviation']:.1f}%")
-                    st.markdown(f"**Detected:** {anomaly['detected'].strftime('%Y-%m-%d %H:%M')}")
-                
-                st.markdown(f"**Root Cause:** {anomaly['root_cause']}")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    if st.button("Acknowledge", key=f"ack_{anomaly['id']}"):
-                        st.success("Anomaly acknowledged")
-                with col2:
-                    if st.button("Mark Resolved", key=f"resolve_{anomaly['id']}"):
-                        st.success("Anomaly marked as resolved")
-                with col3:
-                    if st.button("False Positive", key=f"fp_{anomaly['id']}"):
-                        st.info("Marked as false positive")
+                with st.expander(f"🔴 {anomaly['service']} - {anomaly['account']} (+{anomaly['deviation']:.1f}%)"):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown(f"**Anomaly ID:** {anomaly['id']}")
+                        st.markdown(f"**Service:** {anomaly['service']}")
+                        st.markdown(f"**Account:** {anomaly['account']}")
+                        st.markdown(f"**Severity:** <span style='color: {severity_color}; font-weight: bold;'>{anomaly['severity'].upper()}</span>", unsafe_allow_html=True)
+                    
+                    with col2:
+                        st.markdown(f"**Expected Cost:** ${anomaly['expected']:,}")
+                        st.markdown(f"**Actual Cost:** ${anomaly['actual']:,}")
+                        st.markdown(f"**Deviation:** +{anomaly['deviation']:.1f}%")
+                        st.markdown(f"**Detected:** {anomaly['detected'].strftime('%Y-%m-%d %H:%M')}")
+                    
+                    st.markdown(f"**Root Cause:** {anomaly['root_cause']}")
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        if st.button("Acknowledge", key=f"ack_{anomaly['id']}"):
+                            st.success("Anomaly acknowledged")
+                    with col2:
+                        if st.button("Mark Resolved", key=f"resolve_{anomaly['id']}"):
+                            st.success("Anomaly marked as resolved")
+                    with col3:
+                        if st.button("False Positive", key=f"fp_{anomaly['id']}"):
+                            st.info("Marked as false positive")
     
     with tab5:
         st.subheader("🤖 AI FinOps Advisor")
