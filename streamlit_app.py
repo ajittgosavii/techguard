@@ -2381,38 +2381,68 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Category to pages mapping
+    # Navigation aligned with TEO Framework: Transform - Evolve - Operate
+    # Reorganized to match the three core phases
     category_pages = {
-        "📊 Overview": ["🏠 Dashboard"],
-        "🛡️ Operations": ["🔨 Build & Run", "🔄 Evolve & Improve", "🐳 Container Security"],
-        "🚀 AI Command Center": ["🚀 Transform"],
-        "🏢 Accounts & Governance": ["🏢 Accounts", "🏢 Multi-Account Manager", "📦 Account Lifecycle", "🔄 Sync"],
-        "🔍 Security & Compliance": ["📜 Policy as Code", "📜 Policies", "🔍 Findings", "🔧 Remediation", "⚠️ Exceptions"],
-        "💰 FinOps & Analytics": ["💰 FinOps Center", "📊 Analytics", "📝 Audit Logs"],
-        "⚙️ Administration": ["⚙️ Operational Controls", "🛠️ Settings"]
+        "🏠 Dashboard": ["🏠 Dashboard"],
+        "🔨 Build & Run": [
+            "📋 Build & Run Overview",
+            "🔍 Findings",
+            "🔧 Remediation",
+            "🐳 Container Security",
+            "🔄 Sync",
+            "📝 Audit Logs"
+        ],
+        "🔄 Evolve & Improve": [
+            "📋 Evolve & Improve Overview",
+            "🏢 Accounts",
+            "🏢 Multi-Account Manager",
+            "📦 Account Lifecycle",
+            "📜 Policy as Code",
+            "📜 Policies",
+            "⚠️ Exceptions",
+            "⚙️ Operational Controls"
+        ],
+        "🚀 Transform": [
+            "🤖 AI Command Center",
+            "💰 FinOps Center",
+            "📊 Analytics"
+        ],
+        "⚙️ Settings": ["🛠️ Settings"]
+    }
+    
+    # Category descriptions for better UX
+    category_descriptions = {
+        "🏠 Dashboard": "Overview & Health",
+        "🔨 Build & Run": "Daily Operations",
+        "🔄 Evolve & Improve": "Governance & Maturity",
+        "🚀 Transform": "AI-Powered Intelligence",
+        "⚙️ Settings": "Configuration"
     }
     
     categories = list(category_pages.keys())
     
-    # Consolidated Navigation with Categories
+    # Phase-based Navigation
     st.markdown("##### 🎯 Navigation")
+    st.caption("*Transform – Evolve – Operate*")
     
     # Category selection - Streamlit handles state via key
     nav_category = st.selectbox(
-        "Category",
+        "Phase",
         categories,
         key="nav_category_persistent",
+        format_func=lambda x: f"{x}",
         label_visibility="collapsed"
     )
+    
+    # Show category description
+    st.caption(f"*{category_descriptions.get(nav_category, '')}*")
     
     # Get pages for current category
     current_pages = category_pages[nav_category]
     
     # Sub-navigation based on category
-    if nav_category == "🚀 AI Command Center":
-        page = "🚀 Transform"
-        st.info("🤖 6 AI Agents Ready")
-    elif len(current_pages) == 1:
+    if len(current_pages) == 1:
         page = current_pages[0]
     else:
         # Use category-specific key for radio to avoid state conflicts
@@ -2423,6 +2453,16 @@ with st.sidebar:
             key=radio_key,
             label_visibility="collapsed"
         )
+        if page == "🤖 AI Command Center":
+            st.info("🤖 6 AI Agents Ready")
+    
+    # Map new page names to existing page handlers
+    page_mapping = {
+        "🤖 AI Command Center": "🚀 Transform",
+        "📋 Build & Run Overview": "🔨 Build & Run",
+        "📋 Evolve & Improve Overview": "🔄 Evolve & Improve",
+    }
+    page = page_mapping.get(page, page)
     
     st.markdown("---")
     
