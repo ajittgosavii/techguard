@@ -5679,13 +5679,40 @@ elif page == "🏢 Accounts":
     st.markdown('<div class="main-header">🏢 Account Management</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">AWS Account Inventory • Compliance Monitoring • Guardrails Enforcement</div>', unsafe_allow_html=True)
     
-    # Get all accounts for metrics
-    with get_db_session() as db:
-        all_accounts = db.query(Account).all()
-        total_accounts = len(all_accounts)
-        active_accounts = len([a for a in all_accounts if a.status == AccountStatus.ACTIVE])
-        guardrails_enabled = len([a for a in all_accounts if a.guardrails_enabled])
-        avg_compliance = sum(a.compliance_score or 0 for a in all_accounts) / total_accounts if total_accounts > 0 else 0
+    # Mode indicator
+    mode_badge = "🟠 DEMO" if is_demo_mode() else "🟢 LIVE"
+    st.caption(f"Data Mode: {mode_badge}")
+    
+    # Demo accounts for demo mode
+    demo_accounts_data = [
+        {"id": 1, "account_id": "111122223333", "name": "Production-Core", "email": "prod@example.com", "status": AccountStatus.ACTIVE, "environment": "production", "business_unit": "Engineering", "compliance_score": 94.5, "guardrails_enabled": True},
+        {"id": 2, "account_id": "222233334444", "name": "Production-Data", "email": "data@example.com", "status": AccountStatus.ACTIVE, "environment": "production", "business_unit": "Data Platform", "compliance_score": 91.2, "guardrails_enabled": True},
+        {"id": 3, "account_id": "333344445555", "name": "Staging-Main", "email": "staging@example.com", "status": AccountStatus.ACTIVE, "environment": "staging", "business_unit": "Engineering", "compliance_score": 87.8, "guardrails_enabled": True},
+        {"id": 4, "account_id": "444455556666", "name": "Development-Team-A", "email": "dev-a@example.com", "status": AccountStatus.ACTIVE, "environment": "development", "business_unit": "Engineering", "compliance_score": 78.3, "guardrails_enabled": True},
+        {"id": 5, "account_id": "555566667777", "name": "Development-Team-B", "email": "dev-b@example.com", "status": AccountStatus.ACTIVE, "environment": "development", "business_unit": "Mobile", "compliance_score": 82.1, "guardrails_enabled": False},
+        {"id": 6, "account_id": "666677778888", "name": "Sandbox-Test", "email": "sandbox@example.com", "status": AccountStatus.ACTIVE, "environment": "sandbox", "business_unit": "QA", "compliance_score": 65.4, "guardrails_enabled": False},
+        {"id": 7, "account_id": "777788889999", "name": "Security-Audit", "email": "security@example.com", "status": AccountStatus.ACTIVE, "environment": "production", "business_unit": "Security", "compliance_score": 98.7, "guardrails_enabled": True},
+        {"id": 8, "account_id": "888899990000", "name": "New-Project-Alpha", "email": "alpha@example.com", "status": AccountStatus.PENDING, "environment": "development", "business_unit": "Innovation", "compliance_score": 0.0, "guardrails_enabled": False},
+    ]
+    
+    # Create demo account objects for demo mode
+    class DemoAccount:
+        def __init__(self, data):
+            for key, value in data.items():
+                setattr(self, key, value)
+    
+    # Get accounts based on mode
+    if is_demo_mode():
+        all_accounts = [DemoAccount(a) for a in demo_accounts_data]
+    else:
+        with get_db_session() as db:
+            all_accounts = db.query(Account).all()
+    
+    # Calculate metrics
+    total_accounts = len(all_accounts)
+    active_accounts = len([a for a in all_accounts if a.status == AccountStatus.ACTIVE])
+    guardrails_enabled = len([a for a in all_accounts if a.guardrails_enabled])
+    avg_compliance = sum(a.compliance_score or 0 for a in all_accounts) / total_accounts if total_accounts > 0 else 0
     
     # Top metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -5723,23 +5750,40 @@ elif page == "🏢 Accounts":
         
         st.markdown("---")
         
-        # Query accounts with filters
-        with get_db_session() as db:
-            query = db.query(Account)
+        # Get accounts based on mode with filters
+        if is_demo_mode():
+            # Use demo data
+            accounts = [DemoAccount(a) for a in demo_accounts_data]
             
+            # Apply filters to demo data
             if status_filter != "All Statuses":
-                query = query.filter(Account.status == AccountStatus(status_filter))
+                accounts = [a for a in accounts if a.status == AccountStatus(status_filter)]
             if env_filter != "All Environments":
-                query = query.filter(Account.environment == env_filter)
+                accounts = [a for a in accounts if a.environment == env_filter]
             if guardrails_filter == "Enabled":
-                query = query.filter(Account.guardrails_enabled == True)
+                accounts = [a for a in accounts if a.guardrails_enabled]
             elif guardrails_filter == "Disabled":
-                query = query.filter(Account.guardrails_enabled == False)
-            
-            accounts = query.all()
-            
+                accounts = [a for a in accounts if not a.guardrails_enabled]
             if search_query:
                 accounts = [a for a in accounts if search_query.lower() in (a.name or '').lower() or search_query.lower() in (a.account_id or '').lower()]
+        else:
+            # Use live database data
+            with get_db_session() as db:
+                query = db.query(Account)
+                
+                if status_filter != "All Statuses":
+                    query = query.filter(Account.status == AccountStatus(status_filter))
+                if env_filter != "All Environments":
+                    query = query.filter(Account.environment == env_filter)
+                if guardrails_filter == "Enabled":
+                    query = query.filter(Account.guardrails_enabled == True)
+                elif guardrails_filter == "Disabled":
+                    query = query.filter(Account.guardrails_enabled == False)
+                
+                accounts = query.all()
+                
+                if search_query:
+                    accounts = [a for a in accounts if search_query.lower() in (a.name or '').lower() or search_query.lower() in (a.account_id or '').lower()]
         
         st.markdown(f"**Showing {len(accounts)} accounts**")
         
@@ -5855,14 +5899,29 @@ elif page == "🏢 Accounts":
                                     
                                     st.markdown("---")
                                     st.markdown("**Recent Findings:**")
-                                    with get_db_session() as db2:
-                                        findings = db2.query(Finding).filter(Finding.aws_account_id == account.account_id).limit(5).all()
-                                        if findings:
-                                            for f in findings:
-                                                sev_color = {"CRITICAL": "#dc2626", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#22c55e"}.get(f.severity.value, "#6b7280")
-                                                st.markdown(f"- <span style='color: {sev_color};'>●</span> {f.title[:60]}...", unsafe_allow_html=True)
+                                    
+                                    if is_demo_mode():
+                                        # Demo findings
+                                        demo_findings = [
+                                            {"severity": "HIGH", "title": "S3 bucket policy allows public access"},
+                                            {"severity": "MEDIUM", "title": "EBS volume not encrypted at rest"},
+                                            {"severity": "LOW", "title": "CloudTrail not enabled in all regions"},
+                                        ]
+                                        if account.compliance_score and account.compliance_score > 90:
+                                            st.success("No critical findings!")
                                         else:
-                                            st.success("No active findings!")
+                                            for f in demo_findings[:2]:
+                                                sev_color = {"CRITICAL": "#dc2626", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#22c55e"}.get(f['severity'], "#6b7280")
+                                                st.markdown(f"- <span style='color: {sev_color};'>●</span> {f['title']}", unsafe_allow_html=True)
+                                    else:
+                                        with get_db_session() as db2:
+                                            findings = db2.query(Finding).filter(Finding.aws_account_id == account.account_id).limit(5).all()
+                                            if findings:
+                                                for f in findings:
+                                                    sev_color = {"CRITICAL": "#dc2626", "HIGH": "#f97316", "MEDIUM": "#f59e0b", "LOW": "#22c55e"}.get(f.severity.value, "#6b7280")
+                                                    st.markdown(f"- <span style='color: {sev_color};'>●</span> {f.title[:60]}...", unsafe_allow_html=True)
+                                            else:
+                                                st.success("No active findings!")
                                     
                                     if st.button("Close", key=f"close_acc_{account.id}"):
                                         st.session_state[f"view_account_{account.id}"] = False
@@ -5873,11 +5932,18 @@ elif page == "🏢 Accounts":
     with tab2:
         st.markdown("### ➕ Onboard New Account")
         
-        st.markdown("""
-        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
-            <strong>💡 Tip:</strong> For bulk onboarding, use the 🔄 Sync page to automatically import accounts from AWS Organizations.
-        </div>
-        """, unsafe_allow_html=True)
+        if is_demo_mode():
+            st.markdown("""
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                <strong>🟠 Demo Mode:</strong> Account creation is simulated. Switch to Live mode to add real accounts.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                <strong>💡 Tip:</strong> For bulk onboarding, use the 🔄 Sync page to automatically import accounts from AWS Organizations.
+            </div>
+            """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
@@ -5898,28 +5964,32 @@ elif page == "🏢 Accounts":
                 
                 if st.form_submit_button("➕ Add Account", type="primary"):
                     if account_id and name:
-                        with get_db_session() as db:
-                            existing = db.query(Account).filter_by(account_id=account_id).first()
-                            if existing:
-                                st.error("Account already exists!")
-                            else:
-                                new_account = Account(
-                                    account_id=account_id, 
-                                    name=name, 
-                                    email=email,
-                                    environment=environment, 
-                                    business_unit=business_unit,
-                                    status=AccountStatus.ACTIVE,
-                                    guardrails_enabled=enable_guardrails,
-                                    compliance_score=100.0
-                                )
-                                db.add(new_account)
-                                db.commit()
-                                create_audit_log(db, AuditAction.CREATE, "account", new_account.id, "user", f"Created {name}")
-                        st.success(f"✅ Account {name} added successfully!")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
+                        if is_demo_mode():
+                            st.success(f"✅ [DEMO] Account {name} would be added!")
+                            st.info("Switch to Live mode to actually add accounts to the database.")
+                        else:
+                            with get_db_session() as db:
+                                existing = db.query(Account).filter_by(account_id=account_id).first()
+                                if existing:
+                                    st.error("Account already exists!")
+                                else:
+                                    new_account = Account(
+                                        account_id=account_id, 
+                                        name=name, 
+                                        email=email,
+                                        environment=environment, 
+                                        business_unit=business_unit,
+                                        status=AccountStatus.ACTIVE,
+                                        guardrails_enabled=enable_guardrails,
+                                        compliance_score=100.0
+                                    )
+                                    db.add(new_account)
+                                    db.commit()
+                                    create_audit_log(db, AuditAction.CREATE, "account", new_account.id, "user", f"Created {name}")
+                                    st.success(f"✅ Account {name} added successfully!")
+                                    st.cache_data.clear()
+                                    time.sleep(1)
+                                    st.rerun()
                     else:
                         st.error("Account ID and Name are required")
         
@@ -5955,8 +6025,12 @@ elif page == "🏢 Accounts":
     with tab3:
         st.markdown("### 📊 Account Analytics")
         
-        with get_db_session() as db:
-            accounts = db.query(Account).all()
+        # Use data from demo/live mode (all_accounts is already defined above)
+        if is_demo_mode():
+            accounts = [DemoAccount(a) for a in demo_accounts_data]
+        else:
+            with get_db_session() as db:
+                accounts = db.query(Account).all()
         
         if accounts:
             col1, col2 = st.columns(2)
@@ -6042,11 +6116,18 @@ elif page == "🏢 Accounts":
     with tab4:
         st.markdown("### ⚙️ Bulk Actions")
         
-        st.markdown("""
-        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
-            <strong>⚠️ Warning:</strong> Bulk actions affect multiple accounts. Use with caution.
-        </div>
-        """, unsafe_allow_html=True)
+        if is_demo_mode():
+            st.markdown("""
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                <strong>🟠 Demo Mode:</strong> Bulk actions are simulated. Switch to Live mode to perform real actions.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 0 8px 8px 0; margin-bottom: 1rem;">
+                <strong>⚠️ Warning:</strong> Bulk actions affect multiple accounts. Use with caution.
+            </div>
+            """, unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         
@@ -6054,26 +6135,35 @@ elif page == "🏢 Accounts":
             st.markdown("#### Enable Guardrails")
             st.markdown("Enable guardrails on all accounts without protection.")
             
-            with get_db_session() as db:
-                unprotected = db.query(Account).filter(Account.guardrails_enabled == False).count()
+            if is_demo_mode():
+                unprotected = len([a for a in demo_accounts_data if not a['guardrails_enabled']])
+            else:
+                with get_db_session() as db:
+                    unprotected = db.query(Account).filter(Account.guardrails_enabled == False).count()
             
             st.metric("Unprotected Accounts", unprotected)
             
             if st.button("🛡️ Enable Guardrails on All", type="primary", disabled=unprotected == 0):
-                with get_db_session() as db:
-                    db.query(Account).filter(Account.guardrails_enabled == False).update({Account.guardrails_enabled: True})
-                    db.commit()
-                st.success(f"✅ Enabled guardrails on {unprotected} accounts!")
-                st.cache_data.clear()
-                time.sleep(1)
-                st.rerun()
+                if is_demo_mode():
+                    st.success(f"✅ [DEMO] Would enable guardrails on {unprotected} accounts!")
+                else:
+                    with get_db_session() as db:
+                        db.query(Account).filter(Account.guardrails_enabled == False).update({Account.guardrails_enabled: True})
+                        db.commit()
+                    st.success(f"✅ Enabled guardrails on {unprotected} accounts!")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
         
         with col2:
             st.markdown("#### Bulk Compliance Scan")
             st.markdown("Run compliance scan across all active accounts.")
             
-            with get_db_session() as db:
-                active_count = db.query(Account).filter(Account.status == AccountStatus.ACTIVE).count()
+            if is_demo_mode():
+                active_count = len([a for a in demo_accounts_data if a['status'] == AccountStatus.ACTIVE])
+            else:
+                with get_db_session() as db:
+                    active_count = db.query(Account).filter(Account.status == AccountStatus.ACTIVE).count()
             
             st.metric("Active Accounts", active_count)
             
@@ -6083,7 +6173,7 @@ elif page == "🏢 Accounts":
                     for i in range(100):
                         time.sleep(0.02)
                         progress.progress(i + 1)
-                st.success(f"✅ Scanned {active_count} accounts!")
+                st.success(f"✅ {'[DEMO] ' if is_demo_mode() else ''}Scanned {active_count} accounts!")
         
         st.markdown("---")
         
@@ -6092,18 +6182,30 @@ elif page == "🏢 Accounts":
         
         with col1:
             if st.button("📤 Export All Accounts (CSV)", use_container_width=True):
-                with get_db_session() as db:
-                    accounts = db.query(Account).all()
+                if is_demo_mode():
                     df = pd.DataFrame([{
-                        "Account ID": a.account_id,
-                        "Name": a.name,
-                        "Email": a.email,
-                        "Status": a.status.value if a.status else "unknown",
-                        "Environment": a.environment,
-                        "Business Unit": a.business_unit,
-                        "Compliance Score": a.compliance_score,
-                        "Guardrails Enabled": a.guardrails_enabled
-                    } for a in accounts])
+                        "Account ID": a['account_id'],
+                        "Name": a['name'],
+                        "Email": a['email'],
+                        "Status": a['status'].value if isinstance(a['status'], AccountStatus) else str(a['status']),
+                        "Environment": a['environment'],
+                        "Business Unit": a['business_unit'],
+                        "Compliance Score": a['compliance_score'],
+                        "Guardrails Enabled": a['guardrails_enabled']
+                    } for a in demo_accounts_data])
+                else:
+                    with get_db_session() as db:
+                        accounts = db.query(Account).all()
+                        df = pd.DataFrame([{
+                            "Account ID": a.account_id,
+                            "Name": a.name,
+                            "Email": a.email,
+                            "Status": a.status.value if a.status else "unknown",
+                            "Environment": a.environment,
+                            "Business Unit": a.business_unit,
+                            "Compliance Score": a.compliance_score,
+                            "Guardrails Enabled": a.guardrails_enabled
+                        } for a in accounts])
                 st.download_button("Download CSV", df.to_csv(index=False), "accounts.csv", "text/csv")
         
         with col2:
