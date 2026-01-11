@@ -5275,23 +5275,108 @@ elif page == "🔄 Sync":
 elif page == "🛠️ Settings":
     st.markdown('<div class="main-header">⚙️ Settings</div>', unsafe_allow_html=True)
     
-    tab1, tab2, tab3 = st.tabs(["🔧 Configuration", "🔐 Connections", "ℹ️ About"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🔧 Configuration", "🗄️ Database", "🔐 Connections", "ℹ️ About"])
     
     with tab1:
         st.subheader("Application Configuration")
         st.markdown(f"- **Claude Model:** {CONFIG['anthropic']['model_id']}")
         st.markdown(f"- **AWS Region:** {CONFIG['aws']['region']}")
-        st.markdown(f"- **Demo Mode:** {'Enabled' if CONFIG['app'].get('enable_demo_mode') else 'Disabled'}")
+        st.markdown(f"- **Default Mode:** {CONFIG['app'].get('default_mode', 'live').upper()}")
+        
+    with tab2:
+        st.subheader("🗄️ Database Management")
+        
+        st.markdown("### Current Database Stats")
+        with get_db_session() as db:
+            col1, col2, col3, col4 = st.columns(4)
+            accounts_count = db.query(Account).count()
+            findings_count = db.query(Finding).count()
+            policies_count = db.query(Policy).count()
+            remediations_count = db.query(Remediation).count()
+            
+            col1.metric("Accounts", accounts_count)
+            col2.metric("Findings", findings_count)
+            col3.metric("Policies", policies_count)
+            col4.metric("Remediations", remediations_count)
         
         st.markdown("---")
-        st.markdown("### Database Stats")
-        with get_db_session() as db:
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Accounts", db.query(Account).count())
-            col2.metric("Findings", db.query(Finding).count())
-            col3.metric("Policies", db.query(Policy).count())
+        
+        # Check if data looks like demo data
+        if accounts_count == 50 or accounts_count == 5:
+            st.warning(f"⚠️ Database contains {accounts_count} accounts which may be demo data from a previous session.")
+        
+        st.markdown("### 🔄 Reset Database")
+        st.markdown("""
+        Use these options to clear old demo data and start fresh with real AWS data.
+        
+        **⚠️ Warning:** These actions cannot be undone!
+        """)
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            st.markdown("#### Clear All Data")
+            st.markdown("Removes all accounts, findings, policies, and other records.")
+            
+            if st.button("🗑️ Clear All Database Data", type="secondary"):
+                st.session_state.confirm_clear_all = True
+            
+            if st.session_state.get('confirm_clear_all', False):
+                st.error("⚠️ Are you sure? This will delete ALL data!")
+                col_yes, col_no = st.columns(2)
+                with col_yes:
+                    if st.button("✅ Yes, Clear Everything", type="primary"):
+                        with get_db_session() as db:
+                            # Clear all tables
+                            db.query(AuditLog).delete()
+                            db.query(Remediation).delete()
+                            db.query(Exception_).delete()
+                            db.query(Finding).delete()
+                            db.query(Policy).delete()
+                            db.query(Account).delete()
+                            db.query(ComplianceScore).delete()
+                            db.query(CostRecord).delete()
+                            db.query(Budget).delete()
+                            db.query(CostAnomaly).delete()
+                            db.query(SavingsRecommendation).delete()
+                            db.query(OperationalMetric).delete()
+                            db.commit()
+                        st.session_state.confirm_clear_all = False
+                        st.success("✅ All data cleared! Refresh the page to see changes.")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                with col_no:
+                    if st.button("❌ Cancel"):
+                        st.session_state.confirm_clear_all = False
+                        st.rerun()
+        
+        with col_b:
+            st.markdown("#### Load Demo Data")
+            st.markdown("Loads minimal sample data (5 accounts, 10 findings) for testing.")
+            
+            if st.button("📊 Load Demo Data", type="secondary"):
+                with get_db_session() as db:
+                    if db.query(Account).count() == 0:
+                        generate_demo_data(db)
+                        st.success("✅ Demo data loaded!")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Database already has data. Clear it first.")
+        
+        st.markdown("---")
+        st.markdown("### 🔄 Sync from AWS")
+        st.markdown("Pull real data from your AWS account (requires AWS connection).")
+        
+        if aws_connected:
+            if st.button("🔄 Sync AWS Organizations & Security Hub", type="primary"):
+                st.info("Navigate to the **🔄 Sync** page for full AWS sync options.")
+        else:
+            st.warning("⚠️ AWS not connected. Configure credentials in the Connections tab.")
     
-    with tab2:
+    with tab3:
         st.subheader("Anthropic Claude API")
         st.markdown(f"**Status:** {'✅ Connected' if claude_available else '❌ Not Connected'}")
         
@@ -5310,7 +5395,7 @@ elif page == "🛠️ Settings":
         st.markdown(f"**Status:** {'✅ Connected' if aws_connected else '❌ Not Connected'}")
         st.markdown("*AWS is optional - only needed for Organizations/SecurityHub sync*")
     
-    with tab3:
+    with tab4:
         st.subheader("About TechGuardrails")
         st.markdown("""
         **TechGuardrails** is an enterprise AWS cloud governance platform.
