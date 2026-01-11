@@ -871,6 +871,28 @@ def calculate_operational_health() -> Dict:
     - Remediation success rate
     - Policy coverage
     """
+    # Check if in demo mode
+    if is_demo_mode():
+        return {
+            "overall_health": 64.0,
+            "status": "fair",
+            "components": {
+                "compliance_score": {"value": 87.5, "weight": 0.30},
+                "finding_impact": {"value": 65.0, "weight": 0.25},
+                "sla_compliance": {"value": 100.0, "weight": 0.20},
+                "remediation_rate": {"value": 100.0, "weight": 0.10},
+                "policy_coverage": {"value": 80.0, "weight": 0.10},
+                "account_coverage": {"value": 87.5, "weight": 0.05}
+            },
+            "findings": {
+                "critical": 2,
+                "high": 5,
+                "medium": 10,
+                "low": 6
+            }
+        }
+    
+    # Live mode - query real database
     with get_db_session() as db:
         weights = get_config_value("severity_weights")
         thresholds = get_config_value("health_thresholds")
@@ -1020,6 +1042,32 @@ def calculate_mttr() -> Dict:
 
 def calculate_coverage_metrics() -> Dict:
     """Calculate coverage metrics for each operational area"""
+    # Check if in demo mode
+    if is_demo_mode():
+        return {
+            "account_onboarding": {
+                "current": 87.5,
+                "target": 100,
+                "count": "7/8"
+            },
+            "guardrails_enabled": {
+                "current": 75.0,
+                "target": 95,
+                "count": "6/8"
+            },
+            "policy_coverage": {
+                "current": 80.0,
+                "target": 90,
+                "count": "12/15"
+            },
+            "remediation_rate": {
+                "current": 65.0,
+                "target": 85,
+                "count": "15 remediated"
+            }
+        }
+    
+    # Live mode - query real database
     with get_db_session() as db:
         targets = get_config_value("coverage_targets")
         
@@ -2096,7 +2144,26 @@ def create_audit_log(db: Session, action: AuditAction, entity_type: str,
     db.commit()
 
 def get_stats(db: Session) -> Dict:
-    """Get dashboard statistics from database or calculate from findings"""
+    """Get dashboard statistics from database or demo data based on mode"""
+    
+    # Check if in demo mode
+    if is_demo_mode():
+        # Return demo statistics
+        return {
+            "total_accounts": 8,
+            "active_accounts": 7,
+            "total_findings": 23,
+            "critical": 2,
+            "high": 5,
+            "medium": 10,
+            "low": 6,
+            "total_policies": 15,
+            "deployed_policies": 12,
+            "pending_exceptions": 3,
+            "compliance_score": 87.5
+        }
+    
+    # Live mode - query real database
     total_accounts = db.query(Account).count()
     active_accounts = db.query(Account).filter(Account.status == AccountStatus.ACTIVE).count()
     
@@ -2158,24 +2225,29 @@ aws_connected = check_aws_credentials()
 claude_available = check_claude_available()
 
 # Calculate operational health (cached for performance)
+# Include mode in cache key to differentiate between demo and live
 @st.cache_data(ttl=60)  # Cache for 60 seconds
-def get_cached_health():
+def get_cached_health(_mode: str = "live"):
     return calculate_operational_health()
 
 @st.cache_data(ttl=60)
-def get_cached_coverage():
+def get_cached_coverage(_mode: str = "live"):
     return calculate_coverage_metrics()
 
 @st.cache_data(ttl=60)
-def get_cached_mttr():
+def get_cached_mttr(_mode: str = "live"):
     return calculate_mttr()
+
+# Helper to get current mode for cache key
+def current_mode():
+    return "demo" if is_demo_mode() else "live"
 
 # ==================== SESSION STATE ====================
 # Initialize session state with dynamic data
 if 'guardrails_data' not in st.session_state:
     # Get real data from database
-    coverage = get_cached_coverage()
-    health = get_cached_health()
+    coverage = get_cached_coverage(current_mode())
+    health = get_cached_health(current_mode())
     
     st.session_state.guardrails_data = {
         'build_run': {
@@ -2234,11 +2306,16 @@ if 'guardrails_data' not in st.session_state:
         }
     }
 
+# ⭐ Initialize data mode in session state EARLY - before any data fetching
+# This ensures is_demo_mode() works correctly when get_stats() is called
+if 'data_mode' not in st.session_state:
+    st.session_state.data_mode = CONFIG["app"].get("default_mode", "live")
+
 # Create a global session for page-level queries
 # Note: Critical functions use context managers for proper cleanup
 db = get_session()
 
-# Get stats
+# Get stats - now respects demo mode because data_mode is initialized above
 stats = get_stats(db)
 
 # ==================== SIDEBAR ====================
@@ -2250,9 +2327,8 @@ with st.sidebar:
     # ⭐ DATA MODE TOGGLE
     st.markdown("### 🎮 Data Mode")
     
-    # Initialize data mode in session state - default to LIVE for real AWS data
-    if 'data_mode' not in st.session_state:
-        st.session_state.data_mode = CONFIG["app"].get("default_mode", "live")
+    # Note: data_mode is initialized earlier in the code (before get_stats is called)
+    # to ensure demo mode is respected from the start
     
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -2340,7 +2416,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Operational Health Indicator
-    health = get_cached_health()
+    health = get_cached_health(current_mode())
     health_color = {"excellent": "#10b981", "good": "#22c55e", "fair": "#f59e0b", "poor": "#f97316", "critical": "#dc2626"}.get(health["status"], "#6b7280")
     st.markdown(f"""
     <div style="text-align: center; padding: 0.5rem; background: {health_color}20; border-radius: 8px; border: 1px solid {health_color};">
@@ -2389,8 +2465,8 @@ if page == "🏠 Dashboard":
     st.markdown('<div class="sub-header">Transform – Evolve – Operate | Your Co-pilot Enabling Future with Care</div>', unsafe_allow_html=True)
     
     # Get dynamic health data
-    health = get_cached_health()
-    coverage = get_cached_coverage()
+    health = get_cached_health(current_mode())
+    coverage = get_cached_coverage(current_mode())
     
     # Phase overview metrics with dynamic data
     col1, col2, col3, col4 = st.columns(4)
@@ -2683,7 +2759,7 @@ elif page == "🔨 Build & Run":
         st.subheader("Operations Dashboard")
         
         # Real-time health metrics
-        health = get_cached_health()
+        health = get_cached_health(current_mode())
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -2742,62 +2818,134 @@ elif page == "🔨 Build & Run":
         with col3:
             source_filter = st.selectbox("Source", ["All", "SecurityHub", "Config", "GuardDuty", "Inspector"])
         
-        # Query findings
-        query = db.query(Finding)
-        if severity_filter:
-            query = query.filter(Finding.severity.in_([FindingSeverity(s) for s in severity_filter]))
-        if status_filter:
-            query = query.filter(Finding.status.in_([FindingStatus(s) for s in status_filter]))
-        if source_filter != "All":
-            query = query.filter(Finding.source == source_filter)
-        
-        findings = query.order_by(Finding.created_at.desc()).limit(50).all()
-        
-        if findings:
-            # Summary metrics
-            col1, col2, col3, col4 = st.columns(4)
-            critical_count = sum(1 for f in findings if f.severity == FindingSeverity.CRITICAL)
-            high_count = sum(1 for f in findings if f.severity == FindingSeverity.HIGH)
+        # Get findings based on mode
+        if is_demo_mode():
+            # Demo findings data
+            demo_findings = [
+                {"finding_id": "DEMO-001-CRITICAL", "severity": "CRITICAL", "title": "S3 bucket is publicly accessible", "aws_account_id": "111122223333", "status": "NEW", "source": "SecurityHub", "age": 3},
+                {"finding_id": "DEMO-002-CRITICAL", "severity": "CRITICAL", "title": "Root account access key found", "aws_account_id": "111122223333", "status": "ACTIVE", "source": "SecurityHub", "age": 7},
+                {"finding_id": "DEMO-003-HIGH", "severity": "HIGH", "title": "EBS volume not encrypted", "aws_account_id": "222233334444", "status": "NEW", "source": "Config", "age": 5},
+                {"finding_id": "DEMO-004-HIGH", "severity": "HIGH", "title": "Security group allows 0.0.0.0/0 on SSH", "aws_account_id": "222233334444", "status": "ACTIVE", "source": "SecurityHub", "age": 12},
+                {"finding_id": "DEMO-005-HIGH", "severity": "HIGH", "title": "IAM user without MFA enabled", "aws_account_id": "333344445555", "status": "NEW", "source": "SecurityHub", "age": 2},
+                {"finding_id": "DEMO-006-HIGH", "severity": "HIGH", "title": "RDS instance is publicly accessible", "aws_account_id": "333344445555", "status": "IN_PROGRESS", "source": "Config", "age": 8},
+                {"finding_id": "DEMO-007-HIGH", "severity": "HIGH", "title": "CloudTrail logging disabled in region", "aws_account_id": "444455556666", "status": "NEW", "source": "SecurityHub", "age": 1},
+                {"finding_id": "DEMO-008-MEDIUM", "severity": "MEDIUM", "title": "EC2 instance without IMDSv2", "aws_account_id": "111122223333", "status": "ACTIVE", "source": "Config", "age": 15},
+                {"finding_id": "DEMO-009-MEDIUM", "severity": "MEDIUM", "title": "Lambda function not in VPC", "aws_account_id": "222233334444", "status": "NEW", "source": "SecurityHub", "age": 4},
+                {"finding_id": "DEMO-010-LOW", "severity": "LOW", "title": "S3 bucket versioning disabled", "aws_account_id": "555566667777", "status": "ACTIVE", "source": "Config", "age": 30},
+            ]
             
-            with col1:
-                st.metric("Total Findings", len(findings))
-            with col2:
-                st.metric("Critical", critical_count, delta_color="inverse")
-            with col3:
-                st.metric("High", high_count, delta_color="inverse")
-            with col4:
-                new_count = sum(1 for f in findings if f.status == FindingStatus.NEW)
-                st.metric("New (Unreviewed)", new_count)
+            # Apply filters to demo data
+            findings_data = demo_findings
+            if severity_filter:
+                findings_data = [f for f in findings_data if f['severity'] in severity_filter]
+            if status_filter:
+                findings_data = [f for f in findings_data if f['status'] in status_filter]
+            if source_filter != "All":
+                findings_data = [f for f in findings_data if f['source'] == source_filter]
             
-            st.markdown("---")
-            
-            # Findings table with actions
-            findings_df = pd.DataFrame([{
-                'ID': f.finding_id[:12] + "...",
-                'Severity': f.severity.value,
-                'Title': f.title[:50] + "..." if len(f.title) > 50 else f.title,
-                'Account': f.aws_account_id,
-                'Status': f.status.value,
-                'Source': f.source,
-                'Age': (datetime.now() - f.first_observed_at.replace(tzinfo=None)).days if f.first_observed_at else 0
-            } for f in findings])
-            
-            st.dataframe(findings_df, use_container_width=True, hide_index=True)
-            
-            # Bulk actions
-            st.markdown("#### Bulk Actions")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🔄 Mark All as In Progress"):
-                    st.success(f"Marked {len(findings)} findings as In Progress")
-            with col2:
-                if st.button("📋 Export to CSV"):
-                    st.download_button("Download CSV", findings_df.to_csv(index=False), "findings.csv", "text/csv")
-            with col3:
-                if st.button("🤖 AI Triage All"):
-                    st.info("AI triage initiated for all findings...")
+            if findings_data:
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                critical_count = sum(1 for f in findings_data if f['severity'] == 'CRITICAL')
+                high_count = sum(1 for f in findings_data if f['severity'] == 'HIGH')
+                
+                with col1:
+                    st.metric("Total Findings", len(findings_data))
+                with col2:
+                    st.metric("Critical", critical_count, delta_color="inverse")
+                with col3:
+                    st.metric("High", high_count, delta_color="inverse")
+                with col4:
+                    new_count = sum(1 for f in findings_data if f['status'] == 'NEW')
+                    st.metric("New (Unreviewed)", new_count)
+                
+                st.markdown("---")
+                
+                # Findings table
+                findings_df = pd.DataFrame([{
+                    'ID': f['finding_id'][:12] + "...",
+                    'Severity': f['severity'],
+                    'Title': f['title'][:50] + "..." if len(f['title']) > 50 else f['title'],
+                    'Account': f['aws_account_id'],
+                    'Status': f['status'],
+                    'Source': f['source'],
+                    'Age': f['age']
+                } for f in findings_data])
+                
+                st.dataframe(findings_df, use_container_width=True, hide_index=True)
+                
+                # Bulk actions
+                st.markdown("#### Bulk Actions")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("🔄 Mark All as In Progress"):
+                        st.success(f"[DEMO] Marked {len(findings_data)} findings as In Progress")
+                with col2:
+                    if st.button("📋 Export to CSV"):
+                        st.download_button("Download CSV", findings_df.to_csv(index=False), "findings.csv", "text/csv")
+                with col3:
+                    if st.button("🤖 AI Triage All"):
+                        st.info("[DEMO] AI triage initiated for all findings...")
+            else:
+                st.info("No findings match the selected filters")
         else:
-            st.info("No findings match the selected filters")
+            # Live mode - query database
+            with get_db_session() as db:
+                query = db.query(Finding)
+                if severity_filter:
+                    query = query.filter(Finding.severity.in_([FindingSeverity(s) for s in severity_filter]))
+                if status_filter:
+                    query = query.filter(Finding.status.in_([FindingStatus(s) for s in status_filter]))
+                if source_filter != "All":
+                    query = query.filter(Finding.source == source_filter)
+                
+                findings = query.order_by(Finding.created_at.desc()).limit(50).all()
+            
+            if findings:
+                # Summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                critical_count = sum(1 for f in findings if f.severity == FindingSeverity.CRITICAL)
+                high_count = sum(1 for f in findings if f.severity == FindingSeverity.HIGH)
+                
+                with col1:
+                    st.metric("Total Findings", len(findings))
+                with col2:
+                    st.metric("Critical", critical_count, delta_color="inverse")
+                with col3:
+                    st.metric("High", high_count, delta_color="inverse")
+                with col4:
+                    new_count = sum(1 for f in findings if f.status == FindingStatus.NEW)
+                    st.metric("New (Unreviewed)", new_count)
+                
+                st.markdown("---")
+                
+                # Findings table with actions
+                findings_df = pd.DataFrame([{
+                    'ID': f.finding_id[:12] + "...",
+                    'Severity': f.severity.value,
+                    'Title': f.title[:50] + "..." if len(f.title) > 50 else f.title,
+                    'Account': f.aws_account_id,
+                    'Status': f.status.value,
+                    'Source': f.source,
+                    'Age': (datetime.now() - f.first_observed_at.replace(tzinfo=None)).days if f.first_observed_at else 0
+                } for f in findings])
+                
+                st.dataframe(findings_df, use_container_width=True, hide_index=True)
+                
+                # Bulk actions
+                st.markdown("#### Bulk Actions")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("🔄 Mark All as In Progress"):
+                        st.success(f"Marked {len(findings)} findings as In Progress")
+                with col2:
+                    if st.button("📋 Export to CSV"):
+                        st.download_button("Download CSV", findings_df.to_csv(index=False), "findings.csv", "text/csv")
+                with col3:
+                    if st.button("🤖 AI Triage All"):
+                        st.info("AI triage initiated for all findings...")
+            else:
+                st.info("No findings match the selected filters")
     
     with tab3:
         st.subheader("🔧 Batch Remediation Center")
@@ -5500,7 +5648,7 @@ elif page == "⚙️ Operational Controls":
             """, unsafe_allow_html=True)
         
         with col2:
-            mttr = get_cached_mttr()
+            mttr = get_cached_mttr(current_mode())
             mttr_df = pd.DataFrame([
                 {"Severity": sev, "MTTR (hrs)": data["mttr_hours"], "Target (hrs)": data["target_hours"], "Status": "✅" if data["performance"] == "on_target" else "❌"}
                 for sev, data in mttr.items()
@@ -5610,7 +5758,7 @@ elif page == "⚙️ Operational Controls":
         st.markdown("---")
         st.subheader("Current MTTR Performance")
         
-        mttr = get_cached_mttr()
+        mttr = get_cached_mttr(current_mode())
         
         fig = go.Figure()
         severities = list(mttr.keys())
@@ -5649,7 +5797,7 @@ elif page == "⚙️ Operational Controls":
         st.markdown("---")
         st.subheader("Weight Impact Visualization")
         
-        health = get_cached_health()
+        health = get_cached_health(current_mode())
         impact_data = []
         for severity, count in health['findings'].items():
             weight = current_weights.get(severity.upper(), 1)
