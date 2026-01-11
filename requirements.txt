@@ -1,0 +1,41 @@
+# TechGuardrails - Streamlit Cloud Dependencies
+# Enterprise Edition with 27,000+ lines of code
+
+# Web Framework
+streamlit>=1.28.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# AWS SDK (for Organizations/SecurityHub sync)
+boto3>=1.34.0
+
+# Anthropic Claude API
+anthropic>=0.40.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.18.0
+
+# Utilities
+python-dateutil>=2.8.2
+pydantic>=2.5.0
+requests>=2.31.0
+
+# Optional: Enterprise Module Dependencies
+# Uncomment if using specific modules
+
+# For PDF/Excel Reports (policy_as_code, eks_vulnerability)
+# reportlab>=4.0.0
+# openpyxl>=3.1.0
+
+# For ML Risk Scoring (eks_vulnerability)
+# scikit-learn>=1.3.0
+# joblib>=1.3.0
+
+# For CrewAI Multi-Agent (crewai_finops_agents)
+# crewai>=0.1.0
+# langchain>=0.1.0
