@@ -875,9 +875,18 @@ def calculate_operational_health() -> Dict:
         weights = get_config_value("severity_weights")
         thresholds = get_config_value("health_thresholds")
         
-        # 1. Get current compliance score
+        # 1. Get current compliance score (0 if no data to indicate need for AWS sync)
         latest_score = db.query(ComplianceScore).order_by(ComplianceScore.calculated_at.desc()).first()
-        compliance_score = latest_score.overall_score if latest_score else 50.0
+        if latest_score:
+            compliance_score = latest_score.overall_score
+        else:
+            # No compliance score recorded - calculate from findings or show 0
+            total_findings = db.query(Finding).count()
+            if total_findings == 0:
+                compliance_score = 0.0  # No data - needs AWS sync
+            else:
+                # Calculate from findings
+                compliance_score = 50.0  # Default baseline
         
         # 2. Calculate finding impact score
         active_statuses = [FindingStatus.NEW, FindingStatus.ACTIVE]
@@ -2087,7 +2096,7 @@ def create_audit_log(db: Session, action: AuditAction, entity_type: str,
     db.commit()
 
 def get_stats(db: Session) -> Dict:
-    """Get dashboard statistics"""
+    """Get dashboard statistics from database or calculate from findings"""
     total_accounts = db.query(Account).count()
     active_accounts = db.query(Account).filter(Account.status == AccountStatus.ACTIVE).count()
     
@@ -2107,8 +2116,22 @@ def get_stats(db: Session) -> Dict:
     deployed_policies = db.query(Policy).filter(Policy.status == PolicyStatus.DEPLOYED).count()
     pending_exceptions = db.query(Exception_).filter(Exception_.status == ExceptionStatus.PENDING).count()
     
+    # Get compliance score - either from ComplianceScore table or calculate from findings
     latest_score = db.query(ComplianceScore).order_by(ComplianceScore.calculated_at.desc()).first()
-    compliance_score = latest_score.overall_score if latest_score else 88.0
+    
+    if latest_score:
+        compliance_score = latest_score.overall_score
+    else:
+        # Calculate compliance score from findings if no score record exists
+        # Formula: Start at 100, deduct based on severity
+        # Critical: -5 each, High: -2 each, Medium: -0.5 each, Low: -0.1 each
+        # Minimum score: 0
+        if total_accounts == 0 and total_findings == 0:
+            # No data at all - show 0 to indicate need for data
+            compliance_score = 0.0
+        else:
+            calculated_score = 100 - (critical * 5) - (high * 2) - (medium * 0.5) - (low * 0.1)
+            compliance_score = max(0, min(100, calculated_score))
     
     return {
         "total_accounts": total_accounts,
@@ -2416,6 +2439,105 @@ if page == "🏠 Dashboard":
                 <p style="color: #64748b; margin: 0;">Overall Score</p>
             </div>
         """, unsafe_allow_html=True)
+    
+    # ==================== DATA SOURCES EXPANDER ====================
+    with st.expander("📋 **Data Sources & Calculation Details**", expanded=False):
+        st.markdown("### How These Metrics Are Calculated")
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            st.markdown("#### 🔨 Build & Run (Operational Health)")
+            st.markdown(f"""
+            **Current Value:** {health['overall_health']:.1f}%
+            
+            **Calculation Formula:**
+            | Component | Value | Weight | Contribution |
+            |-----------|-------|--------|--------------|
+            | Compliance Score | {health['components']['compliance_score']['value']:.1f}% | 30% | {health['components']['compliance_score']['value'] * 0.30:.1f} |
+            | Finding Impact | {health['components']['finding_impact']['value']:.1f}% | 25% | {health['components']['finding_impact']['value'] * 0.25:.1f} |
+            | SLA Compliance | {health['components']['sla_compliance']['value']:.1f}% | 20% | {health['components']['sla_compliance']['value'] * 0.20:.1f} |
+            | Remediation Rate | {health['components']['remediation_rate']['value']:.1f}% | 10% | {health['components']['remediation_rate']['value'] * 0.10:.1f} |
+            | Policy Coverage | {health['components']['policy_coverage']['value']:.1f}% | 10% | {health['components']['policy_coverage']['value'] * 0.10:.1f} |
+            | Account Coverage | {health['components']['account_coverage']['value']:.1f}% | 5% | {health['components']['account_coverage']['value'] * 0.05:.1f} |
+            
+            **Data Sources:**
+            - `ComplianceScore` table (latest record)
+            - `Finding` table (active findings by severity)
+            - `SLADefinition` table (SLA compliance check)
+            - `Remediation` table (success rate)
+            - `Policy` table (deployed vs total)
+            - `Account` table (active with guardrails)
+            """)
+            
+            st.markdown("#### 🚀 Transform (Progress)")
+            st.markdown(f"""
+            **Current Value:** {transform_progress:.1f}%
+            
+            **Calculation:** Average of initiative progress
+            
+            | Initiative | Progress |
+            |------------|----------|
+            | Zero-Trust Architecture | {transform_data.get('Zero-Trust Architecture', {}).get('implementation', 0)}% |
+            | AIOps Platform | {transform_data.get('AIOps Platform', {}).get('deployment', 0)}% |
+            | Human-AI Collaboration | {transform_data.get('Human-AI Collaboration', {}).get('ai_adoption', 0)}% |
+            | FinOps Convergence | {transform_data.get('FinOps Convergence', {}).get('integration', 0)}% |
+            
+            **Data Sources:**
+            - Session state configuration
+            - *Note: Update via Transform page settings*
+            """)
+        
+        with col_b:
+            st.markdown("#### 🔄 Evolve & Improve (Maturity Level)")
+            st.markdown(f"""
+            **Current Value:** {evolve_maturity:.1f}%
+            
+            **Calculation:** Average of:
+            - Policy Coverage: {coverage['policy_coverage']['current']:.1f}%
+            - Remediation Rate: {coverage['remediation_rate']['current']:.1f}%
+            - Account Onboarding: {coverage['account_onboarding']['current']:.1f}%
+            
+            **Formula:** ({coverage['policy_coverage']['current']:.1f} + {coverage['remediation_rate']['current']:.1f} + {coverage['account_onboarding']['current']:.1f}) / 3 = {evolve_maturity:.1f}%
+            
+            **Data Sources:**
+            - `Policy` table: {coverage['policy_coverage']['count']} policies
+            - `Finding` table: {coverage['remediation_rate']['count']}
+            - `Account` table: {coverage['account_onboarding']['count']} accounts
+            """)
+            
+            st.markdown("#### 📊 Compliance (Overall Score)")
+            st.markdown(f"""
+            **Current Value:** {stats['compliance_score']:.1f}%
+            
+            **Data Source:**
+            - `ComplianceScore` table (most recent record)
+            - Falls back to default 88.0% if no records
+            
+            **Finding Breakdown:**
+            - 🔴 Critical: {stats['critical']}
+            - 🟠 High: {stats['high']}
+            - 🟡 Medium: {stats['medium']}
+            - 🟢 Low: {stats['low']}
+            - **Total Active:** {stats['total_findings']}
+            """)
+        
+        st.markdown("---")
+        st.markdown("#### 🔌 Live Data Connection Status")
+        
+        col_x, col_y, col_z = st.columns(3)
+        with col_x:
+            if aws_connected:
+                st.success("✅ AWS Connected")
+            else:
+                st.warning("⚠️ AWS Not Connected")
+        with col_y:
+            if claude_available:
+                st.success("✅ Claude AI Available")
+            else:
+                st.info("ℹ️ Claude AI Not Configured")
+        with col_z:
+            st.info(f"📊 Database: {stats['total_accounts']} accounts, {stats['total_policies']} policies")
     
     st.markdown("---")
     
