@@ -255,7 +255,7 @@ def get_config():
             "url": "sqlite:///techguardrails.db"
         },
         "app": {
-            "default_mode": "demo",  # 'demo' or 'live'
+            "default_mode": "live",  # 'demo' or 'live' - default to live for real AWS data
             "enable_auto_remediation": False
         },
         "finops": {
@@ -1134,7 +1134,7 @@ def check_alert_rules() -> List[Dict]:
 # ==================== DATA MODE HELPERS ====================
 def is_demo_mode() -> bool:
     """Check if application is in demo mode"""
-    return st.session_state.get('data_mode', CONFIG["app"].get("default_mode", "demo")) == "demo"
+    return st.session_state.get('data_mode', CONFIG["app"].get("default_mode", "live")) == "demo"
 
 def is_live_mode() -> bool:
     """Check if application is in live mode with valid AWS connection"""
@@ -2000,118 +2000,83 @@ def check_aws_credentials():
 
 # ==================== DEMO DATA GENERATOR ====================
 def generate_demo_data(db: Session):
+    """Generate minimal demo data only if explicitly called and DB is empty"""
     if db.query(Account).count() > 0:
         return
     
     import random
     
-    environments = ["production", "staging", "development", "sandbox"]
-    business_units = ["Engineering", "Finance", "Marketing", "Operations", "Security"]
+    # Only create 5 sample accounts (not 50)
+    environments = ["production", "staging", "development"]
+    business_units = ["Engineering", "Finance", "Operations"]
     
-    for i in range(50):
+    for i in range(5):
         account = Account(
             account_id=f"{100000000000 + i}",
-            name=f"aws-{environments[i % 4]}-{i:03d}",
-            email=f"owner{i}@company.com",
-            status=random.choice([AccountStatus.ACTIVE, AccountStatus.ACTIVE, AccountStatus.ACTIVE, AccountStatus.PENDING]),
-            environment=environments[i % 4],
+            name=f"demo-{environments[i % 3]}-{i:03d}",
+            email=f"demo{i}@example.com",
+            status=AccountStatus.ACTIVE,
+            environment=environments[i % 3],
             business_unit=random.choice(business_units),
-            compliance_score=round(random.uniform(70, 99), 1),
-            guardrails_enabled=random.choice([True, True, True, False])
+            compliance_score=round(random.uniform(80, 95), 1),
+            guardrails_enabled=True
         )
         db.add(account)
     
+    # Only create 10 sample findings (not 100)
     finding_types = [
         ("S3 Bucket Public Access", "AWS::S3::Bucket", FindingSeverity.CRITICAL),
         ("Unencrypted EBS Volume", "AWS::EC2::Volume", FindingSeverity.HIGH),
         ("Security Group Open to World", "AWS::EC2::SecurityGroup", FindingSeverity.CRITICAL),
         ("IAM User Without MFA", "AWS::IAM::User", FindingSeverity.HIGH),
         ("CloudTrail Not Enabled", "AWS::CloudTrail::Trail", FindingSeverity.MEDIUM),
-        ("RDS Instance Not Encrypted", "AWS::RDS::DBInstance", FindingSeverity.HIGH),
-        ("VPC Flow Logs Disabled", "AWS::EC2::VPC", FindingSeverity.MEDIUM),
-        ("Root Account Used", "AWS::IAM::Root", FindingSeverity.CRITICAL),
-        ("Missing Resource Tags", "AWS::EC2::Instance", FindingSeverity.LOW),
-        ("Old Access Keys", "AWS::IAM::AccessKey", FindingSeverity.MEDIUM),
     ]
     
-    for i in range(100):
+    for i in range(10):
         finding_type = random.choice(finding_types)
-        account_id = f"{100000000000 + random.randint(0, 49)}"
+        account_id = f"{100000000000 + random.randint(0, 4)}"
         
         finding = Finding(
-            finding_id=f"finding-{uuid.uuid4().hex[:12]}",
-            source=random.choice(["SecurityHub", "Config", "GuardDuty"]),
+            finding_id=f"demo-finding-{uuid.uuid4().hex[:8]}",
+            source=random.choice(["SecurityHub", "Config"]),
             aws_account_id=account_id,
-            region=random.choice(["us-east-1", "us-west-2", "eu-west-1"]),
+            region="us-east-1",
             resource_type=finding_type[1],
-            resource_id=f"resource-{uuid.uuid4().hex[:8]}",
+            resource_id=f"demo-resource-{uuid.uuid4().hex[:6]}",
             title=finding_type[0],
-            description=f"Security finding: {finding_type[0]} detected",
+            description=f"Demo finding: {finding_type[0]}",
             severity=finding_type[2],
-            status=random.choice([FindingStatus.NEW, FindingStatus.ACTIVE, FindingStatus.IN_PROGRESS]),
-            compliance_frameworks=random.sample(["PCI-DSS", "HIPAA", "SOC2", "ISO27001"], k=random.randint(1, 3)),
-            first_observed_at=utcnow() - timedelta(days=random.randint(1, 30)),
+            status=FindingStatus.NEW,
+            compliance_frameworks=["SOC2"],
+            first_observed_at=utcnow() - timedelta(days=random.randint(1, 7)),
             last_observed_at=utcnow()
         )
         db.add(finding)
     
+    # Only 3 sample policies
     policy_templates = [
         ("Enforce S3 Encryption", PolicyType.SCP, "encryption"),
         ("Deny Public S3 Buckets", PolicyType.SCP, "access-control"),
         ("Require MFA for Console", PolicyType.IAM_POLICY, "identity"),
-        ("Enforce EBS Encryption", PolicyType.CONFIG_RULE, "encryption"),
-        ("Restrict Instance Types", PolicyType.SCP, "cost-control"),
     ]
     
     for name, ptype, category in policy_templates:
         policy = Policy(
-            policy_id=f"pol-{uuid.uuid4().hex[:12]}",
+            policy_id=f"demo-pol-{uuid.uuid4().hex[:8]}",
             name=name,
-            description=f"Policy to {name.lower()}",
+            description=f"Demo policy to {name.lower()}",
             policy_type=ptype,
-            status=random.choice([PolicyStatus.DRAFT, PolicyStatus.APPROVED, PolicyStatus.DEPLOYED]),
+            status=PolicyStatus.DEPLOYED,
             policy_document={"Version": "2012-10-17", "Statement": []},
             version=1,
-            compliance_frameworks=["PCI-DSS", "SOC2"],
+            compliance_frameworks=["SOC2"],
             category=category,
-            created_by="admin"
+            created_by="demo"
         )
         db.add(policy)
     
-    for i in range(10):
-        exc = Exception_(
-            exception_id=f"exc-{uuid.uuid4().hex[:12]}",
-            title=f"Exception for legacy system {i}",
-            justification="Legacy system requires temporary exception",
-            status=random.choice([ExceptionStatus.PENDING, ExceptionStatus.APPROVED]),
-            valid_from=utcnow(),
-            valid_until=utcnow() + timedelta(days=90),
-            risk_assessment="Low risk with compensating controls",
-            compensating_controls="Enhanced monitoring enabled",
-            requested_by="user@company.com"
-        )
-        db.add(exc)
-    
-    for days_ago in range(30):
-        score = ComplianceScore(
-            overall_score=round(85 + random.uniform(-5, 10), 1),
-            critical_findings=random.randint(0, 5),
-            high_findings=random.randint(5, 15),
-            medium_findings=random.randint(10, 30),
-            low_findings=random.randint(20, 50),
-            calculated_at=utcnow() - timedelta(days=days_ago)
-        )
-        db.add(score)
-    
-    audit = AuditLog(
-        action=AuditAction.CREATE,
-        entity_type="system",
-        entity_id="demo",
-        actor="system",
-        description="Generated demo data"
-    )
-    db.add(audit)
     db.commit()
+    logger.info("Generated minimal demo data (5 accounts, 10 findings, 3 policies)")
 
 # ==================== HELPER FUNCTIONS ====================
 def create_audit_log(db: Session, action: AuditAction, entity_type: str, 
@@ -2163,10 +2128,8 @@ def get_stats(db: Session) -> Dict:
 # Initialize default configurations
 initialize_default_config()
 
-# Always generate demo data for the database (it only creates if empty)
-# The data_mode toggle controls which data is DISPLAYED, not what's in DB
-with get_db_session() as db:
-    generate_demo_data(db)
+# Note: Demo data generation removed - app now uses real AWS data only
+# Use the Demo/Live toggle in sidebar to switch between demo view and live AWS data
 
 aws_connected = check_aws_credentials()
 claude_available = check_claude_available()
@@ -2264,9 +2227,9 @@ with st.sidebar:
     # ⭐ DATA MODE TOGGLE
     st.markdown("### 🎮 Data Mode")
     
-    # Initialize data mode in session state
+    # Initialize data mode in session state - default to LIVE for real AWS data
     if 'data_mode' not in st.session_state:
-        st.session_state.data_mode = CONFIG["app"].get("default_mode", "demo")
+        st.session_state.data_mode = CONFIG["app"].get("default_mode", "live")
     
     col1, col2 = st.columns([1, 1])
     with col1:
